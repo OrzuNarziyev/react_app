@@ -35,20 +35,6 @@ r = redis.Redis(
 channel_layer = get_channel_layer()
 channel_name = 'chat_test'
 
-def send_websocket(frame, channel_name='stream'):
-        _, src = cv2.imencode('.jpg', frame)
-        b64_image = base64.b64encode(src)
-        # channel_layer.group_send(
-        #     channel_name, {"type": f"chat.{channel}",
-        #                     "message": [b64_image],
-        #                     })
-        
-        async_to_sync(channel_layer.group_send)(
-            channel_name, {"type": f"chat.stream",
-                            "message": [b64_image],
-                            }
-        )
-
 
 class Cameo(object):
 
@@ -58,34 +44,26 @@ class Cameo(object):
     '''
 
     def __init__(self, window='Camera 1', url=0, mirror=True):
-        self._windowManager = WindowManager(f'camera {window}',
-                                            self.onKeypress)
+        # self._windowManager = WindowManager(f'camera {window}',
+        #                                     self.onKeypress)
         self.cap = cv2.VideoCapture(url)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self._captureManager = CaptureManager(
-            self.cap, self._windowManager, mirror)
+            self.cap, mirror)
         
-        self._curveFilter = filters.BGRPortraCurveFilter()
-
-    def between_callback(frame, channel_name):
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-                loop.run_until_complete(send_websocket(frame, channel_name))
-                loop.close()
+        # self._curveFilter = filters.BGRPortraCurveFilter()
 
 
     def run(self, threadID=None):
 
         """Run the main loop."""
 
-        self._windowManager.createWindow()
-        while self._windowManager.isWindowCreated:
+        # self._windowManager.createWindow()
+        while True:
             self._captureManager.enterFrame()
             frame = self._captureManager.frame
             channel_name = f"chat_camera{threadID}"
-            # self.between_callback(frame, channel_name=channel_name)
             # try:
             #     send_websocket(frame=frame, channel_name=channel_name)
             # except:
@@ -100,11 +78,14 @@ class Cameo(object):
                 # self._curveFilter.apply(frame, frame)
 
             self._captureManager.exitFrame(channel_name)
-            self._windowManager.processEvents()
+            time.sleep(0.04)
+
+            # self._windowManager.processEvents()
 
 
 
     def onKeypress(self, keycode):
+        pass
 
         """Handle a keypress.
         space  -> Take a screenshot.
@@ -112,16 +93,16 @@ class Cameo(object):
         escape -> Quit.
         """
 
-        if keycode == 32: # space
-            self._captureManager.writeImage('screenshot.png')
-        elif keycode == 9: # tab
-            if not self._captureManager.isWritingVideo:
-                self._captureManager.startWritingVideo(
-                    'screencast.avi')
-            else:
-                self._captureManager.stopWritingVideo()
-        elif keycode == 27: # escape
-            self._windowManager.destroyWindow()
+        # if keycode == 32: # space
+        #     self._captureManager.writeImage('screenshot.png')
+        # elif keycode == 9: # tab
+        #     if not self._captureManager.isWritingVideo:
+        #         self._captureManager.startWritingVideo(
+        #             'screencast.avi')
+        #     else:
+        #         self._captureManager.stopWritingVideo()
+        # elif keycode == 27: # escape
+        #     self._windowManager.destroyWindow()
 
 
 
@@ -153,23 +134,17 @@ if __name__== "__main__":
 
 
     cam_list=[
-        0, "rtsp://admin:S@lom123456!@10.73.100.41:554//"
+        "rtsp://admin:S@lom123456!@10.73.100.41:554//", "rtsp://admin:S@lom123456!@10.73.100.41:554//"
         ]
     
     
-    # for i, cam in enumerate(cam_list):
-    #     thread1 = ThreadCamera(i, cam)
-    #     threads.append(thread1)
-    thread1 = ThreadCamera(1, 0)
+
+    thread1 = ThreadCamera(1, cam_list[0])
     thread2 = ThreadCamera(2, cam_list[1])
 
     thread1.join()
     thread2.join()
 
-    # for i in threads:
-    #     i.start()
-    # cam = Cameo('camera1', cam_list[0], True)
-    # cam.run()
     
 
 

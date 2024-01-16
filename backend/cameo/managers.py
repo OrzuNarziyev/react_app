@@ -75,6 +75,7 @@ class CaptureManager(object):
         if self._enteredFrame and self._frame is None:
             _, self._frame = self._capture.retrieve(
                     self._frame, self.channel)
+            self._frame = cv2.pyrDown(self._frame, (.5, .5))
         return self._frame
 
     @property
@@ -101,15 +102,15 @@ class CaptureManager(object):
         font = cv2.FONT_HERSHEY_SIMPLEX
         # print(int(self._capture.get(
         #                 cv2.CAP_PROP_FRAME_WIDTH)/2))
-        # size = [int(self._capture.get(
-        #                 cv2.CAP_PROP_FRAME_WIDTH)/2),
-        #             int(self._capture.get(
-        #                 cv2.CAP_PROP_FRAME_HEIGHT)/2)]
+        size = (int(self._capture.get(
+                        cv2.CAP_PROP_FRAME_WIDTH)-10),
+                    int(self._capture.get(
+                        cv2.CAP_PROP_FRAME_HEIGHT)-10))
         # org = (size[1], size[0])
-        fontScale = 1
+        fontScale = 5
         color = (255, 0, 0)
         thickness = 2
-        image = cv2.putText(self._frame, 'some text', (450, 380), font, fontScale,color, thickness,cv2.LINE_AA)
+        image = cv2.putText(self._frame, 'some text', size, font, fontScale,color, thickness,cv2.LINE_AA)
         return image
 
 
@@ -137,12 +138,12 @@ class CaptureManager(object):
                 mirroredFrame = numpy.fliplr(self._frame)
                 frame = self.put_text(mirroredFrame)
                 send_websocket(frame, channel_name)
-                self.previewWindowManager.show(frame)
+                # self.previewWindowManager.show(frame)
             else:
                 # print('keldi')
                 frame = self.put_text(self._frame)
                 send_websocket(frame, channel_name)
-                self.previewWindowManager.show(frame)
+                # self.previewWindowManager.show(frame)
                 # send_websocket(self._frame)
                 # self.previewWindowManager.show(self._frame)
 
