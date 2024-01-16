@@ -9,7 +9,8 @@ sys.path.append('/home/scale/projects/react_app/backend')
 import base64
 import json
 import time
-from threading import Event, Thread
+# from threading import Event, Thread
+import threading
 from asgiref.sync import async_to_sync
 import asyncio
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -23,6 +24,8 @@ from channels.layers import get_channel_layer
 import redis
 from django.contrib.auth.models import User
 
+from concurrent.futures import ThreadPoolExecutor as Executor
+
 r = redis.Redis(
     host=settings.REDIS_HOST,
     db=settings.REDIS_DB,
@@ -30,9 +33,9 @@ r = redis.Redis(
 )
 
 channel_layer = get_channel_layer()
-# channel_name = 'chat_test'
+channel_name = 'chat_test'
 
-async def send_websocket(frame, channel_name='stream'):
+def send_websocket(frame, channel_name='stream'):
         _, src = cv2.imencode('.jpg', frame)
         b64_image = base64.b64encode(src)
         # channel_layer.group_send(
@@ -40,7 +43,7 @@ async def send_websocket(frame, channel_name='stream'):
         #                     "message": [b64_image],
         #                     })
         
-        await channel_layer.group_send(
+        async_to_sync(channel_layer.group_send)(
             channel_name, {"type": f"chat.stream",
                             "message": [b64_image],
                             }
@@ -73,8 +76,7 @@ class Cameo(object):
                 loop.close()
 
 
-    async def run(self, threadID):
-        time.sleep(.5)
+    def run(self, threadID=None):
 
         """Run the main loop."""
 
@@ -82,7 +84,7 @@ class Cameo(object):
         while self._windowManager.isWindowCreated:
             self._captureManager.enterFrame()
             frame = self._captureManager.frame
-            channel_name = f"{threadID}"
+            channel_name = f"chat_camera{threadID}"
             # self.between_callback(frame, channel_name=channel_name)
             # try:
             #     send_websocket(frame=frame, channel_name=channel_name)
@@ -91,12 +93,13 @@ class Cameo(object):
 
 
             if frame is not None:
-                print('self')
-                await send_websocket(frame=frame, channel_name=channel_name)
+                # print('self')
+                pass
+                # await send_websocket(frame=frame, channel_name=channel_name)
                 # filters.strokeEdges(frame, frame)
                 # self._curveFilter.apply(frame, frame)
 
-            self._captureManager.exitFrame()
+            self._captureManager.exitFrame(channel_name)
             self._windowManager.processEvents()
 
 
@@ -126,13 +129,15 @@ class Cameo(object):
 
 
 
-class ThreadCamera(Thread):
+class ThreadCamera(threading.Thread):
 
     def __init__(self, threadId, url):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         self.threadID = threadId
         self.url = url
         self.camera = Cameo(threadId, url, False)
+        self.start()
+        # self.daemon = True
 
         # self.daemon = True
 
@@ -148,131 +153,25 @@ if __name__== "__main__":
 
 
     cam_list=[
-        "rtsp://admin:S@lom123456!@10.73.100.41:554//", 0
+        0, "rtsp://admin:S@lom123456!@10.73.100.41:554//"
         ]
-
-    for i, cam in enumerate(cam_list):
-        thread1 = ThreadCamera(i+1,cam)
-        threads.append(thread1)
-
-    for i in threads:
-        i.start()
+    
+    
     # for i, cam in enumerate(cam_list):
     #     thread1 = ThreadCamera(i, cam)
     #     threads.append(thread1)
+    thread1 = ThreadCamera(1, 0)
+    thread2 = ThreadCamera(2, cam_list[1])
+
+    thread1.join()
+    thread2.join()
 
     # for i in threads:
     #     i.start()
+    # cam = Cameo('camera1', cam_list[0], True)
+    # cam.run()
     
 
-    # t1 = Thread(target=thread_camera(1, cam_list[0]))
-    # t1.start()
-    # t1.join()
-
-
-    # t2 = Thread(target=thread_camera(2, 0))
-    # t2.start()
-    # t2.join()
-
-    # camera1 = Cameo('camera 1', cam_list[0], False)
-    # # camera2 = Cameo('camera 2', 0, False)
-    # camera1.run(1)
-
-    # camera2 = Cameo('camera 2', cam_list[0], False)
-    # camera2.run(2)
 
 
 
-    # camera2 = Cameo('camera 3', cam_list[1], False)
-    # camera2.run(2)
-
-    # camera3 = Cameo('camera 1', 0, False)
-    # camera3.run(2)
-
-
-    # for i, cam in enumerate(cam_list):
-    #     thread1 = ThreadCamera(i, cam)
-    #     threads.append(thread1)
-    
-
-    # for i in threads:
-    #     i.start()
-        # i.join()
-    # while True:
-    # t1 = Thread(target=camera1.run)
-    # t1.start()
-    # t1.join()
-
-    # t2 = Thread(target=camera2.run)
-    # t2.start()
-    # t2.join()
-    # for i in threads:
-    #     i.start()
-        # i.join()
-    
-    # while True:
-
-
-    # for i, cam in enumerate(cam_list):
-    #     thread1 = ThreadCamera(i, cam)
-    #     threads.append(thread1)
-
-    # for i in threads:
-    #     i.start()
-    
-
-# not found icon
-    # <i class="las la-exclamation-triangle"></i>
-
-
-# from threading import Thread
-# import cv2, time
-
-# class ThreadedCamera(object):
-#     def __init__(self, src=0):
-#         self.capture = cv2.VideoCapture(src)
-#         self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 2)
-       
-#         # FPS = 1/X
-#         # X = desired FPS
-#         self.FPS = 1/30
-#         self.FPS_MS = int(self.FPS * 1000)
-        
-#         # Start frame retrieval thread
-#         self.thread = Thread(target=self.update, args=())
-#         self.thread.daemon = True
-#         self.thread.start()
-        
-#     def update(self):
-#         while True:
-#             if self.capture.isOpened():
-#                 (self.status, self.frame) = self.capture.read()
-#             time.sleep(self.FPS)
-            
-#     def show_frame(self, name):
-#         send_websocket(self.frame)
-#         # cv2.imshow(name, self.frame)
-#         # cv2.waitKey(self.FPS_MS)
-
-
-# def send_websocket(frame, channel='stream'):
-#     _, src = cv2.imencode('.jpg', frame)
-#     b64_image = base64.b64encode(src)
-    
-#     async_to_sync(channel_layer.group_send)(
-#         channel_name, {"type": f"chat.{channel}",
-#                         "message": [b64_image],
-#                         }
-#     )
-
-
-# if __name__ == '__main__':
-#     src = 'rtsp://admin:S@lom123456!@10.73.100.41:554//'
-#     threaded_camera1 = ThreadedCamera(src)
-#     threaded_camera2 = ThreadedCamera(src)
-#     while True:
-#         try:
-#             threaded_camera1.show_frame('stream')
-#             threaded_camera2.show_frame('stream1')
-#         except AttributeError:
-#             pass

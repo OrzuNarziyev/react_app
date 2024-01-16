@@ -26,10 +26,18 @@ r = redis.Redis(
 )
 
 channel_layer = get_channel_layer()
-channel_name = 'chat_test'
+# channel_name = 'chat_test'
 
 from asgiref.sync import async_to_sync
+def send_websocket(frame, channel_name='camera'):
+    _, src = cv2.imencode('.jpg', frame)
+    b64_image = base64.b64encode(src)
 
+    async_to_sync(channel_layer.group_send)(
+        channel_name, {"type": f"chat.stream",
+                        "message": [b64_image],
+                        }
+    )
 
 class CaptureManager(object):
 
@@ -89,18 +97,23 @@ class CaptureManager(object):
             self._enteredFrame = self._capture.grab()
 
     
-    def send_websocket(self, frame, channel='stream'):
-        _, src = cv2.imencode('.jpg', frame)
-        b64_image = base64.b64encode(src)
- 
-        async_to_sync(channel_layer.group_send)(
-            channel_name, {"type": f"chat.{channel}",
-                            "message": [b64_image],
-                            }
-        )
+    def put_text(self, frame):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        # print(int(self._capture.get(
+        #                 cv2.CAP_PROP_FRAME_WIDTH)/2))
+        # size = [int(self._capture.get(
+        #                 cv2.CAP_PROP_FRAME_WIDTH)/2),
+        #             int(self._capture.get(
+        #                 cv2.CAP_PROP_FRAME_HEIGHT)/2)]
+        # org = (size[1], size[0])
+        fontScale = 1
+        color = (255, 0, 0)
+        thickness = 2
+        image = cv2.putText(self._frame, 'some text', (450, 380), font, fontScale,color, thickness,cv2.LINE_AA)
+        return image
 
 
-    def exitFrame(self):
+    def exitFrame(self, channel_name):
         """Draw to the window. Write to files. Release the frame."""
 
         # Check whether any grabbed frame is retrievable.
@@ -117,16 +130,21 @@ class CaptureManager(object):
             self._fpsEstimate =  self._framesElapsed / timeElapsed
         self._framesElapsed += 1
 
+
         # Draw to the window, if any.
         if self.previewWindowManager is not None:
             if self.shouldMirrorPreview:
                 mirroredFrame = numpy.fliplr(self._frame)
-                # self.send_websocket(mirroredFrame)
-                self.previewWindowManager.show(mirroredFrame)
+                frame = self.put_text(mirroredFrame)
+                send_websocket(frame, channel_name)
+                self.previewWindowManager.show(frame)
             else:
                 # print('keldi')
-                # self.send_websocket(self._frame)
-                self.previewWindowManager.show(self._frame)
+                frame = self.put_text(self._frame)
+                send_websocket(frame, channel_name)
+                self.previewWindowManager.show(frame)
+                # send_websocket(self._frame)
+                # self.previewWindowManager.show(self._frame)
 
         # Write to the image file, if any.
         if self.isWritingImage:

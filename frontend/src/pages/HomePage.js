@@ -14,137 +14,134 @@ import { string } from "prop-types";
 
 const HomePage = () => {
     const [ws, setWs] = useState(null);
-    const [ws_2, setWs2] = useState(null);
+    // const [ws_2, setWs2] = useState(null);
     // const [images, setImages] = useState({
     //     // cap_1: null,
     //     // cap_2: null,
     //     // cap_3: null,
     //     // cap_4: null
     // });
-    const [images, setImages] = useState({ images: [] });
+    // const [images, setImages] = useState({ images: [] });
+    // const [images2, setImages2] = useState({ images: [] });
     // const [images, setImages] = useState([])
-    const [frame, setFrame] = useState()
-    const [loading, setLoading] = useState(false)
-    const URL_WEB_SOCKET = "ws://127.0.0.1:8000/ws/chat/test/";
-    const URL_WEB_SOCKET_2 = "ws://127.0.0.1:8000/ws/chat/camera/";
+    // const [frame, setFrame] = useState()
+    // const [loading, setLoading] = useState(false)
+    // const URL_WEB_SOCKET = "ws://127.0.0.1:8000/ws/chat/camera1/";
+    // const URL_WEB_SOCKET_2 = "ws://127.0.0.1:8000/ws/chat/camera2/";
 
 
-    useEffect(() => {
-        const socket = new WebSocket(URL_WEB_SOCKET)
-        const socket_2 = new WebSocket(URL_WEB_SOCKET_2)
-        socket.onopen = () => {
-            setWs(socket);
-            socket.send(JSON.stringify({ 'message': "Ulanish tashkil etildi" }))
-        }
-        socket_2.onopen = () => {
-            setWs2(socket_2);
-            socket.send(JSON.stringify({ 'message': "Ulanish tashkil etildi 2" }))
-        }
+    // useEffect(() => {
+    //     const socket = new WebSocket(URL_WEB_SOCKET)
+    //     const socket_2 = new WebSocket(URL_WEB_SOCKET_2)
+    //     socket.onopen = () => {
+    //         setWs(socket);
+    //         socket.send(JSON.stringify({ 'message': "Ulanish tashkil etildi" }))
+    //     }
+    //     socket_2.onopen = () => {
+    //         setWs2(socket_2);
+    //         socket.send(JSON.stringify({ 'message': "Ulanish tashkil etildi 2" }))
+    //     }
 
 
-        // socket.onclose = () => console.log('ws closed');
-        // return () => {
-        //     socket.close();
-        // };
+    //     // socket.onclose = () => console.log('ws closed');
+    //     // return () => {
+    //     //     socket.close();
+    //     // };
 
 
-    }, [])
+    // }, [])
 
-    useEffect(() => {
-        if (ws) {
-            ws.onmessage = (event) => {
-                const message = JSON.parse(event.data);
-                console.log(message)
+    // useEffect(() => {
+    //     if (ws) {
+    //         ws.onmessage = (event) => {
+    //             const message = JSON.parse(event.data);
 
-                if (message.length > 0) {
-                    // const data = message.map((item, i) => {
-                    //     return {
-                    //         i: item
-                    //     }
-                    // })
+    //             if (message.length > 0) {
+    //                 // const data = message.map((item, i) => {
+    //                 //     return {
+    //                 //         i: item
+    //                 //     }
+    //                 // })
 
-                    setImages({
-                        images: message,
+    //                 setImages({
+    //                     images: message,
 
-                    })
-                }
-                // if (message.length > 0) {
-                //     setImages({
-                //         ...images,
-                //         cap_1: message[0],
-                //         // cap_2: message[1],
-                //         // cap_3: message[2],
-                //         // cap_4: message[3],
-                //     })
-                //     setLoading(true)
-                // } else {
-                //     setLoading(false)
-                // }
-            }
+    //                 })
+    //             }
+    //         }
 
-        }
-        if (ws_2) {
-            
-            ws.onmessage = (event) => {
-                const message = JSON.parse(event.data);
-                console.log(message)
+    //     }
+    //     if (ws_2) {
 
-                if (message.length > 0) {
-                    console.log(message, 'camera 2')
-                    // const data = message.map((item, i) => {
-                    //     return {
-                    //         i: item
-                    //     }
-                    // })
+    //         ws_2.onmessage = (event) => {
+    //             const message = JSON.parse(event.data);
+    //             console.log(message)
 
-                    // setImages({
-                    //     images: message,
+    //             if (message.length > 0) {
+    //                 console.log(message, 'camera 2')
+    //                 // const data = message.map((item, i) => {
+    //                 //     return {
+    //                 //         i: item
+    //                 //     }
+    //                 // })
 
-                    // })
-                }
-                // if (message.length > 0) {
-                //     setImages({
-                //         ...images,
-                //         cap_1: message[0],
-                //         // cap_2: message[1],
-                //         // cap_3: message[2],
-                //         // cap_4: message[3],
-                //     })
-                //     setLoading(true)
-                // } else {
-                //     setLoading(false)
-                // }
-            }
+    //                 setImages2({
+    //                     images2: message,
 
-        }
+    //                 })
+    //             }
+    //             // if (message.length > 0) {
+    //             //     setImages({
+    //             //         ...images,
+    //             //         cap_1: message[0],
+    //             //         // cap_2: message[1],
+    //             //         // cap_3: message[2],
+    //             //         // cap_4: message[3],
+    //             //     })
+    //             //     setLoading(true)
+    //             // } else {
+    //             //     setLoading(false)
+    //             // }
+    //         }
 
-    }, [ws, images])
+    //     }
 
-    function renderItems(arr) {
-        let element = []
-        for (let index = 0; index < 4; index++) {
-            if (arr[index]) {
-                element.push(
-                    <VideoFrame cap_id={index + 1} src={arr[index]} key={index} />
-                )
-            } else {
-                element.push(
-                    <VideoFrame cap_id={index + 1} src={null} key={index} />
-                )
-            }
+    // }, [ws, images])
 
-        }
-        return (
-            <div className="col-span-2 grid 2xl:grid-cols-2 xl:grid-cols-1 gap-3">
-                {element}
-            </div>
+    // function renderItems(arr) {
+    //     let element = []
+    //     for (let index = 0; index < 1; index++) {
+    //         if (arr[index]) {
+    //             element.push(
+    //                 <VideoFrame cap_id={index + 1} src={arr[index]} key={index} />
+    //             )
+    //         } else {
+    //             element.push(
+    //                 <VideoFrame cap_id={index + 1} src={null} key={index} />
+    //             )
+    //         }
+
+    //     }
+    //     return (
+    //         <>
+    //         </>
+    //         // <div className="col-span-2 grid 2xl:grid-cols-2 xl:grid-cols-1 gap-3">
+    //         //     {element}
+    //         // </div>
 
 
 
+    //     )
+
+    // }
+
+    const content = []
+    for (let index = 1; index <= 2; index++) {
+        content.push(
+            <VideoFrame id={index} key={index} />
         )
 
     }
-    const content = renderItems(images.images)
 
     return (
 
@@ -189,8 +186,13 @@ const HomePage = () => {
                 </div>
             </div>
             <div className="grid grid-cols-3 gap-5 my-5">
+                <div className="col-span-2 grid 2xl:grid-cols-2 xl:grid-cols-1 gap-3">
 
-                {content}
+                    {content}
+
+                </div>
+
+                {/* {content} */}
                 {/* <div className="col-span-2 grid 2xl:grid-cols-2 xl:grid-cols-1 gap-3">
                     <VideoFrame cap_id={1} src={images.cap_1} />
                     <VideoFrame cap_id={2} src={images.cap_1} />

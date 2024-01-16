@@ -1,12 +1,39 @@
 import { useEffect, useState } from "react";
 
 const VideoFrame = (props) => {
-    const { cap_id, src } = props
-    const image = 'data:image/jpg;base64,' + src
-    if (src) {
+    const { id } = props
+    const URL_WEB_SOCKET = `ws://127.0.0.1:8000/ws/chat/camera${id}/`;
+    const [ws, setWs] = useState(null);
+    const [img, setImg] = useState(null);
+
+    useEffect(() => {
+        const socket = new WebSocket(URL_WEB_SOCKET)
+        socket.onopen = () => {
+            setWs(socket);
+            socket.send(JSON.stringify({ 'message': "Ulanish tashkil etildi" }))
+        }
+    }, [])
+
+    useEffect(() => {
+        if (ws) {
+            ws.onmessage = (event) => {
+                const image = JSON.parse(event.data);
+
+                if (image.length > 0) {
+                    setImg(image)
+                    console.log(image)
+                }
+            }
+
+        }
+    }, [ws, img])
+
+    // const { id } = props
+    const image = 'data:image/jpg;base64,' + img
+    if (img) {
         return (
             <div className="card p-3">
-                <h3>Camera {cap_id}</h3>
+                <h3>Camera {id}</h3>
                 <div className="mt-3">
                     <div className="aspect-w-2 aspect-h-1">
 
@@ -16,10 +43,10 @@ const VideoFrame = (props) => {
                 </div>
             </div>
         )
-    }else{
+    } else {
         return (
             <div className="card p-3">
-                <h3>Camera {cap_id}</h3>
+                <h3>Camera {id}</h3>
                 <div className="mt-3">
                     <div className="aspect-w-2 aspect-h-1">
                         <div role="status" className="flex items-center justify-center bg-gray-300 rounded-lg animate-pulse dark:bg-gray-700">
@@ -38,7 +65,7 @@ const VideoFrame = (props) => {
         )
     }
     // if (!src || !src.lenght) {
-        
+
     // }
 
 
