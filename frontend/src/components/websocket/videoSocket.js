@@ -21,7 +21,6 @@ const VideoFrame = (props) => {
 
                 if (image.length > 0) {
                     setImg(image)
-                    console.log(image)
                 }
             }
 

@@ -1,3 +1,5 @@
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any
 import cv2
 import numpy
 import time
@@ -18,6 +20,7 @@ from django.conf import settings
 from channels.layers import get_channel_layer
 import redis
 from django.contrib.auth.models import User
+from threading import Thread
 
 r = redis.Redis(
     host=settings.REDIS_HOST,
@@ -39,6 +42,20 @@ def send_websocket(frame, channel_name='camera'):
                         }
     )
 
+
+class ThreadDetect(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+
+        self.start()
+
+
+    
+    def run(self):
+        
+        pass
+
+
 class CaptureManager(object):
 
     def __init__(self, capture, previewWindowManager = None,
@@ -51,6 +68,7 @@ class CaptureManager(object):
         self._channel = 0
         self._enteredFrame = False
         self._frame = None
+        self._frame_detect = None
         self._imageFilename = None
         self._videoFilename = None
         self._videoEncoding = None
@@ -59,6 +77,8 @@ class CaptureManager(object):
         self._startTime = None
         self._framesElapsed = 0
         self._fpsEstimate = None
+
+        # self.t1 = Thread(target=self.text_detect)
 
     @property
     def channel(self):
@@ -76,7 +96,13 @@ class CaptureManager(object):
             _, self._frame = self._capture.retrieve(
                     self._frame, self.channel)
             self._frame = cv2.pyrDown(self._frame, (.5, .5))
+            # async_to_sync(self.text_detect)
         return self._frame
+
+
+    # @property
+    # def frame_detect(self):
+    #     pass
 
     @property
     def isWritingImage(self):
@@ -85,6 +111,28 @@ class CaptureManager(object):
     @property
     def isWritingVideo(self):
         return self._videoFilename is not None
+    
+    # @property
+    # def draw_rect(self, img, top_left, bottom_right, color=(255, 0, 0),
+    #           thickness=2, fill=cv2.LINE_AA):
+    #     new_img = img.copy()
+    #     cv2.rectangle(new_img, top_left, bottom_right, color,
+    #                 thickness, fill)
+    #     return new_img
+    
+    @property
+    def text_detect(self):
+        self._frame_detect = self._frame
+        textSpotter = cv2.text.TextDetectorCNN_create("textbox.prototxt", "TextBoxes_icdar13.caffemodel")
+        rects, outProbs = textSpotter.detect(self._frame_detect)
+        # vis = self._frame.copy()
+        thres = 0.06
+
+        for r in range(numpy.shape(rects)[0]):
+            if outProbs[r] > thres:
+                rect = rects[r]
+                cv2.rectangle(self._frame_detect, (rect[0],rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (255, 0, 0), 2)
+        # yield self._frame_detect
 
     def enterFrame(self):
         """Capture the next frame, if any."""
@@ -102,15 +150,15 @@ class CaptureManager(object):
         font = cv2.FONT_HERSHEY_SIMPLEX
         # print(int(self._capture.get(
         #                 cv2.CAP_PROP_FRAME_WIDTH)/2))
-        size = (int(self._capture.get(
-                        cv2.CAP_PROP_FRAME_WIDTH)-10),
-                    int(self._capture.get(
-                        cv2.CAP_PROP_FRAME_HEIGHT)-10))
-        # org = (size[1], size[0])
-        fontScale = 5
+        # size = (int(self._capture.get(
+        #                 cv2.CAP_PROP_FRAME_WIDTH)/2),
+        #             int(self._capture.get(
+        #                 cv2.CAP_PROP_FRAME_HEIGHT)/2))
+        org = (10, 30)
+        fontScale = 2
         color = (255, 0, 0)
         thickness = 2
-        image = cv2.putText(self._frame, 'some text', size, font, fontScale,color, thickness,cv2.LINE_AA)
+        image = cv2.putText(self._frame, 'some text', org, font, fontScale,color, thickness,cv2.LINE_AA)
         return image
 
 
@@ -131,21 +179,31 @@ class CaptureManager(object):
             self._fpsEstimate =  self._framesElapsed / timeElapsed
         self._framesElapsed += 1
 
+        # if (self.frame is not None):
+        #     t1 = Thread(target=self.text_detect).start()
+
+            # t1.join()
+            # self.text_detect()
+
 
         # Draw to the window, if any.
         if self.previewWindowManager is not None:
+
             if self.shouldMirrorPreview:
+                # self.text_detect
+
                 mirroredFrame = numpy.fliplr(self._frame)
-                frame = self.put_text(mirroredFrame)
-                send_websocket(frame, channel_name)
-                # self.previewWindowManager.show(frame)
+                # frame = self.put_text(mirroredFrame)
+                # send_websocket(frame, channel_name)
+                self.previewWindowManager.show(mirroredFrame)
+
             else:
-                # print('keldi')
-                frame = self.put_text(self._frame)
-                send_websocket(frame, channel_name)
+                # self.text_detect
+                # frame = self.put_text(self._frame)
+                # send_websocket(frame, channel_name)
                 # self.previewWindowManager.show(frame)
                 # send_websocket(self._frame)
-                # self.previewWindowManager.show(self._frame)
+                self.previewWindowManager.show(self._frame)
 
         # Write to the image file, if any.
         if self.isWritingImage:

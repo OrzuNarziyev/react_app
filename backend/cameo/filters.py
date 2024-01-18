@@ -105,6 +105,7 @@ def strokeEdges(src, dst, blurKsize=7, edgeKsize=5):
         channel[:] = channel * normalizedInverseAlpha
     cv2.merge(channels, dst)
 
+    # cv2.imwrite("../wagonImages/detectWagonImages/wagon50.jpg", vis)
 
 
 def detect_text_cnn(src):

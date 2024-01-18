@@ -2,6 +2,8 @@ import Footer from "partials/Footer";
 import { useEffect, useState } from "react";
 import { authService } from "services/authService";
 import VideoFrame from "components/websocket/videoSocket";
+import SerialSocket from "components/serialSocket/serialSocket";
+
 import Skeleton from "components/websocket/skeleton";
 import Avatar from "components/Avatar";
 
@@ -13,7 +15,8 @@ import Breadcrumb, { BreadcrumbItem } from "components/Breadcrumb";
 import { string } from "prop-types";
 
 const HomePage = () => {
-    const [ws, setWs] = useState(null);
+    // const [ws, setWs] = useState(null);
+
     // const [ws_2, setWs2] = useState(null);
     // const [images, setImages] = useState({
     //     // cap_1: null,
@@ -135,6 +138,7 @@ const HomePage = () => {
 
     // }
 
+
     const content = []
     for (let index = 1; index <= 2; index++) {
         content.push(
@@ -154,14 +158,15 @@ const HomePage = () => {
 
             <div className="flex flex-row flex-wrap justify-evenly gap-5" >
 
+                <SerialSocket />
 
-                <div className="card p-3 w-80">
+                {/* <div className="card p-3 w-80">
                     <h3>Vazn</h3>
                     <div className="flex p-2 flex-row  justify-evenly  gap-5 items-start lg:transform hover:scale-103 transition-transform duration-200">
                         <span className="text-primary px-5 border-r-2 text-5xl las la-weight-hanging"></span>
                         <div className="text-primary mt-5 text-3xl leading-3">18 000 kg</div>
                     </div>
-                </div>
+                </div> */}
                 <div className="card p-3 w-80">
                     <h3>Vagon nomer</h3>
                     <div className="flex p-2 flex-row gap-5 justify-evenly items-start lg:transform hover:scale-103 transition-transform duration-200">

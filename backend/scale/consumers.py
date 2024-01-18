@@ -20,7 +20,6 @@ class ChatConsumer(WebsocketConsumer):
         self.accept()
 
     def disconnect(self, close_code):
-        print(close_code, 'disconnect websocket')
 
         # Leave room group
         async_to_sync(self.channel_layer.group_discard)(
@@ -48,14 +47,13 @@ class ChatConsumer(WebsocketConsumer):
     def chat_stream(self, event):
 
         messages = event["message"]
-        print('streamga keldi')
+
         data = [x.decode() for x in messages]
 
         # Send message to WebSocket
         self.send(text_data=json.dumps(data))
 
     def chat_camera1(self, event):
-        print('camera 1')
 
         messages = event["message"]
         data = [x.decode() for x in messages]
@@ -65,7 +63,6 @@ class ChatConsumer(WebsocketConsumer):
     
 
     def chat_camera2(self, event):
-        print('camera 2')
 
         messages = event["message"]
         data = [x.decode() for x in messages]
@@ -73,6 +70,10 @@ class ChatConsumer(WebsocketConsumer):
         # Send message to WebSocket
         self.send(text_data=json.dumps(data))
     
+    def chat_serial(self, event):
+        message = event["message"]
+        # Send message to WebSocket
+        self.send(text_data=json.dumps({"message": message}))
 
 
     def chat_info(self, event):
@@ -80,8 +81,3 @@ class ChatConsumer(WebsocketConsumer):
         # Send message to WebSocket
         self.send(text_data=json.dumps({"message": message}))
 
-    def chat_serial(self, event):
-        url_image = event["url"]
-        weight = event["weight"]
-        # Send message to WebSocket
-        self.send(text_data=json.dumps({"url_image": url_image.decode(), 'weight': weight}))
