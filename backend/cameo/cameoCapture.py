@@ -30,6 +30,10 @@ from scale.models import CameraIp
 
 from serialPort.ser import SerialSocket
 
+from threading import Lock
+
+lock = Lock()
+
 
 
 r = redis.Redis(
@@ -49,12 +53,11 @@ class Cameo(object):
     camera - index camera or url rtsp
     '''
 
-    def __init__(self, window='Camera 1', url=0, mirror=True):
+    def __init__(self, window='1', url=0, mirror=True):
         self._windowManager = WindowManager(f'camera {window}',
                                             self.onKeypress)
         self.cap = cv2.VideoCapture(url)
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+       
         self._captureManager = CaptureManager(
             self.cap,self._windowManager, shouldMirrorPreview=mirror)
         
@@ -67,36 +70,40 @@ class Cameo(object):
 
         self._windowManager.createWindow()
         while True:
-            self._captureManager.enterFrame()
-            frame = self._captureManager.frame
-            channel_name = f"chat_camera{threadID}"
-            # try:
-            #     send_websocket(frame=frame, channel_name=channel_name)
-            # except:
-            #     print('pass')
+                time.sleep(1/25)
+                lock.acquire()
+                self._captureManager.enterFrame()
+                frame = self._captureManager.frame
+                group_name = f"chat_camera{threadID}"
+                print(group_name)
+                lock.release()
+                # try:
+                #     send_websocket(frame=frame, channel_name=channel_name)
+                # except:
+                #     print('pass')
 
 
-            if frame is not None:
-                # print('self')
-                pass
-                # await send_websocket(frame=frame, channel_name=channel_name)
-                # filters.strokeEdges(frame, frame)
-                # self._curveFilter.apply(frame, frame)
+                if frame is not None:
+                    # print('self')
+                    pass
+                    # await send_websocket(frame=frame, channel_name=channel_name)
+                    # filters.strokeEdges(frame, frame)
+                    # self._curveFilter.apply(frame, frame)
 
-            self._captureManager.exitFrame(channel_name)
-            self._windowManager.processEvents()
-            time.sleep(.1)
+                self._captureManager.exitFrame(group_name)
+                self._windowManager.processEvents()
 
 
 
     def onKeypress(self, keycode):
-        # pass
+
 
         """Handle a keypress.
         space  -> Take a screenshot.
         tab    -> Start/stop recording a screencast.
         escape -> Quit.
         """
+
 
         if keycode == 32: # space
             self._captureManager.writeImage('screenshot.png')
@@ -122,9 +129,7 @@ class ThreadCamera(threading.Thread):
 
 
     def run(self) -> None:
-        # time.sleep(1)
         self.camera.run(self.threadID)
-
 
 
 class ThreadSerial(threading.Thread):
@@ -137,13 +142,23 @@ class ThreadSerial(threading.Thread):
     def run(self):
         self.serial.run()
 
+
 if __name__== "__main__":
     threads = []
-
     cam_list = CameraIp.objects.all()
     threadSerial = ThreadSerial()
-    thread2 = ThreadCamera(2, 0)
-    thread2.join()
+    for i, cam in enumerate(cam_list):
+        thread1 = ThreadCamera(int(i+1), str(cam))
+        threads.append(thread1)
+    
+
+    for i in threads:
+        i.join()
+
+        
+    
+
+    # thread2.join()
 
 
     # cam_list=[

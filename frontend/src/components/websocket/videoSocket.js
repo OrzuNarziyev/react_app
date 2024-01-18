@@ -18,7 +18,6 @@ const VideoFrame = (props) => {
         if (ws) {
             ws.onmessage = (event) => {
                 const image = JSON.parse(event.data);
-
                 if (image.length > 0) {
                     setImg(image)
                 }

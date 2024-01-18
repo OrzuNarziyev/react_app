@@ -32,34 +32,23 @@ channel_layer = get_channel_layer()
 # channel_name = 'chat_test'
 
 from asgiref.sync import async_to_sync
-def send_websocket(frame, channel_name='camera'):
+def send_websocket(frame, group_name='camera'):
     _, src = cv2.imencode('.jpg', frame)
     b64_image = base64.b64encode(src)
 
     async_to_sync(channel_layer.group_send)(
-        channel_name, {"type": f"chat.stream",
+        group_name, {"type": f"chat.stream",
                         "message": [b64_image],
                         }
     )
 
 
-class ThreadDetect(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-
-        self.start()
-
-
-    
-    def run(self):
-        
-        pass
 
 
 class CaptureManager(object):
 
     def __init__(self, capture, previewWindowManager = None,
-                 shouldMirrorPreview = False):
+                 shouldMirrorPreview = True):
 
         self.previewWindowManager = previewWindowManager
         self.shouldMirrorPreview = shouldMirrorPreview
@@ -97,8 +86,39 @@ class CaptureManager(object):
                     self._frame, self.channel)
             self._frame = cv2.pyrDown(self._frame, (.5, .5))
             # async_to_sync(self.text_detect)
-        return self._frame
 
+            width, heigth = int(self._capture.get(3)), int(self._capture.get(4))
+            point1 = (0, int(heigth/15))
+            point2 = (int(width), int(heigth/15))
+
+            point3 = (0, int(heigth/15))
+            point4 = (int(width), int(heigth/15))
+
+            # point3 = (0, int(heigth-heigth/15))
+            # point4 = (int(width), int(int(heigth-heigth/10)))
+            cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
+            print(width)
+            cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
+
+            # self._frame = self._frame[0: int(heigth - heigth/5), 0: int(width)]
+            self._frame = self._frame[int(heigth//15): int(heigth - heigth/15),  0: width]
+            # self.cut_frame(int(heigth//10), 300, width)
+            # cv2.line(self._frame,(0, int(heigth- heigth/10)),(int(width), int(heigth - heigth/10)),(245, 238, 230), 5)
+
+            # cv2.line(self._frame, point3,point4,(245, 238, 230), 10)
+            # self._frame = self._frame[0:int(width/2), 0: int(heigth/2) ]
+            
+        return self._frame
+    
+
+    def cut_frame(self, y1, height, width):
+        '''point format >> >> [y: y+h]
+         x1 >> 0 ga teng 
+         x+with >> umumiy widthga teng 
+        '''
+        frame = self._frame
+        if frame is not None:
+            self._frame_detect = self._frame[y1: y1+height,  0: width]
 
     # @property
     # def frame_detect(self):
@@ -150,10 +170,11 @@ class CaptureManager(object):
         font = cv2.FONT_HERSHEY_SIMPLEX
         # print(int(self._capture.get(
         #                 cv2.CAP_PROP_FRAME_WIDTH)/2))
-        # size = (int(self._capture.get(
-        #                 cv2.CAP_PROP_FRAME_WIDTH)/2),
-        #             int(self._capture.get(
-        #                 cv2.CAP_PROP_FRAME_HEIGHT)/2))
+        size = (int(self._capture.get(
+                        cv2.CAP_PROP_FRAME_WIDTH)/2),
+                    int(self._capture.get(
+                        cv2.CAP_PROP_FRAME_HEIGHT)/2))
+        print(size)
         org = (10, 30)
         fontScale = 2
         color = (255, 0, 0)
@@ -162,7 +183,7 @@ class CaptureManager(object):
         return image
 
 
-    def exitFrame(self, channel_name):
+    def exitFrame(self, group_name):
         """Draw to the window. Write to files. Release the frame."""
 
         # Check whether any grabbed frame is retrievable.
@@ -192,17 +213,17 @@ class CaptureManager(object):
             if self.shouldMirrorPreview:
                 # self.text_detect
 
-                mirroredFrame = numpy.fliplr(self._frame)
+                self._frame = numpy.fliplr(self._frame)
                 # frame = self.put_text(mirroredFrame)
-                # send_websocket(frame, channel_name)
-                self.previewWindowManager.show(mirroredFrame)
+                send_websocket(self._frame, group_name)
+                self.previewWindowManager.show(self._frame)
 
             else:
                 # self.text_detect
                 # frame = self.put_text(self._frame)
                 # send_websocket(frame, channel_name)
                 # self.previewWindowManager.show(frame)
-                # send_websocket(self._frame)
+                send_websocket(self._frame, group_name)
                 self.previewWindowManager.show(self._frame)
 
         # Write to the image file, if any.
