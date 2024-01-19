@@ -66,6 +66,8 @@ class CaptureManager(object):
         self._startTime = None
         self._framesElapsed = 0
         self._fpsEstimate = None
+        self.textSpotter = cv2.text.TextDetectorCNN_create("textbox.prototxt", "TextBoxes_icdar13.caffemodel")
+
 
         # self.t1 = Thread(target=self.text_detect)
 
@@ -84,24 +86,24 @@ class CaptureManager(object):
         if self._enteredFrame and self._frame is None:
             _, self._frame = self._capture.retrieve(
                     self._frame, self.channel)
-            self._frame = cv2.pyrDown(self._frame, (.5, .5))
+            # self._frame = cv2.pyrDown(self._frame, (.5, .5))
             # async_to_sync(self.text_detect)
 
             width, heigth = int(self._capture.get(3)), int(self._capture.get(4))
-            point1 = (0, int(heigth/15))
-            point2 = (int(width), int(heigth/15))
+            # point1 = (0, int(heigth/15))
+            # point2 = (int(width), int(heigth/15))
 
-            point3 = (0, int(heigth/15))
-            point4 = (int(width), int(heigth/15))
+            # point3 = (0, int(heigth/15))
+            # point4 = (int(width), int(heigth/15))
 
             # point3 = (0, int(heigth-heigth/15))
             # point4 = (int(width), int(int(heigth-heigth/10)))
-            cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
-            print(width)
-            cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
+            # cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
+            # print(width)
+            # cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
 
             # self._frame = self._frame[0: int(heigth - heigth/5), 0: int(width)]
-            self._frame = self._frame[int(heigth//15): int(heigth - heigth/15),  0: width]
+            # self._frame = self._frame[int(heigth//15): int(heigth - heigth/15),  0: width]
             # self.cut_frame(int(heigth//10), 300, width)
             # cv2.line(self._frame,(0, int(heigth- heigth/10)),(int(width), int(heigth - heigth/10)),(245, 238, 230), 5)
 
@@ -118,7 +120,14 @@ class CaptureManager(object):
         '''
         frame = self._frame
         if frame is not None:
-            self._frame_detect = self._frame[y1: y1+height,  0: width]
+            return self._frame[y1: y1+height,  0: width]
+
+    def draw_rect(img, top_left, bottom_right, color,
+        thickness, fill=cv2.LINE_AA):
+        new_img = img.copy()
+        cv2.rectangle(new_img, top_left, bottom_right, color,
+                    thickness, fill)
+        return new_img
 
     # @property
     # def frame_detect(self):
@@ -140,19 +149,27 @@ class CaptureManager(object):
     #                 thickness, fill)
     #     return new_img
     
-    @property
+
     def text_detect(self):
-        self._frame_detect = self._frame
-        textSpotter = cv2.text.TextDetectorCNN_create("textbox.prototxt", "TextBoxes_icdar13.caffemodel")
-        rects, outProbs = textSpotter.detect(self._frame_detect)
+        # self._frame_detect = self._frame
+        # width, heigth = int(self._capture.get(3)), int(self._capture.get(4))
+        
+        # frame = self.cut_frame(100, 400, width)
+
+
+        rects, outProbs = self.textSpotter.detect(self._frame)
         # vis = self._frame.copy()
         thres = 0.06
 
         for r in range(numpy.shape(rects)[0]):
             if outProbs[r] > thres:
                 rect = rects[r]
+                '''bu shart height 80 dan katta 105 dan kichik razmerdagi texni aniqlaydi '''
+                # if rect[3] > 80 and rect[3] < 105:
+                print(rect[3], '====================........')
+                self._frame_detect = self._frame
                 cv2.rectangle(self._frame_detect, (rect[0],rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (255, 0, 0), 2)
-        # yield self._frame_detect
+
 
     def enterFrame(self):
         """Capture the next frame, if any."""
@@ -166,21 +183,21 @@ class CaptureManager(object):
             self._enteredFrame = self._capture.grab()
 
     
-    def put_text(self, frame):
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        # print(int(self._capture.get(
-        #                 cv2.CAP_PROP_FRAME_WIDTH)/2))
-        size = (int(self._capture.get(
-                        cv2.CAP_PROP_FRAME_WIDTH)/2),
-                    int(self._capture.get(
-                        cv2.CAP_PROP_FRAME_HEIGHT)/2))
-        print(size)
-        org = (10, 30)
-        fontScale = 2
-        color = (255, 0, 0)
-        thickness = 2
-        image = cv2.putText(self._frame, 'some text', org, font, fontScale,color, thickness,cv2.LINE_AA)
-        return image
+    # def put_text(self, frame):
+    #     font = cv2.FONT_HERSHEY_SIMPLEX
+    #     # print(int(self._capture.get(
+    #     #                 cv2.CAP_PROP_FRAME_WIDTH)/2))
+    #     size = (int(self._capture.get(
+    #                     cv2.CAP_PROP_FRAME_WIDTH)/2),
+    #                 int(self._capture.get(
+    #                     cv2.CAP_PROP_FRAME_HEIGHT)/2))
+    #     print(size)
+    #     org = (10, 30)
+    #     fontScale = 2
+    #     color = (255, 0, 0)
+    #     thickness = 2
+    #     image = cv2.putText(self._frame, 'some text', org, font, fontScale,color, thickness,cv2.LINE_AA)
+    #     return image
 
 
     def exitFrame(self, group_name):
@@ -215,16 +232,21 @@ class CaptureManager(object):
 
                 self._frame = numpy.fliplr(self._frame)
                 # frame = self.put_text(mirroredFrame)
-                send_websocket(self._frame, group_name)
-                self.previewWindowManager.show(self._frame)
-
+                # self.text_detect()
+                # send_websocket(self._frame, group_name)
+                self.previewWindowManager.show(self._frame_detect)
+                self.previewWindowManager.show(self._frame_detect)
             else:
                 # self.text_detect
                 # frame = self.put_text(self._frame)
                 # send_websocket(frame, channel_name)
-                # self.previewWindowManager.show(frame)
-                send_websocket(self._frame, group_name)
-                self.previewWindowManager.show(self._frame)
+                # self.text_detect()
+                self.previewWindowManager.show(self._frame_detect)
+
+
+                # send_websocket(self._frame, group_name)
+
+                # self.previewWindowManager.show(self._frame)
 
         # Write to the image file, if any.
         if self.isWritingImage:

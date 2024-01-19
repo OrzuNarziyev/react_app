@@ -70,7 +70,8 @@ class Cameo(object):
 
         self._windowManager.createWindow()
         while True:
-                time.sleep(1/25)
+                
+                # time.sleep(1/25)
                 lock.acquire()
                 self._captureManager.enterFrame()
                 frame = self._captureManager.frame
@@ -147,13 +148,18 @@ if __name__== "__main__":
     threads = []
     cam_list = CameraIp.objects.all()
     threadSerial = ThreadSerial()
-    for i, cam in enumerate(cam_list):
-        thread1 = ThreadCamera(int(i+1), str(cam))
-        threads.append(thread1)
+
+    thread1 = ThreadCamera(1, './video/10.73.100.92_01_20240118155802912.mp4')
+    thread1.join()
+
+
+    # for i, cam in enumerate(cam_list):
+    #     thread1 = ThreadCamera(int(i+1), str(cam))
+    #     threads.append(thread1)
     
 
-    for i in threads:
-        i.join()
+    # for i in threads:
+    #     i.join()
 
         
     
@@ -162,16 +168,18 @@ if __name__== "__main__":
 
 
     # cam_list=[
-    #     "rtsp://admin:A12345678@10.73.100.46/:554//", "rtsp://admin:S@lom123456!@10.73.100.41:554//"
+    #     "rtsp://admin:A12345678@10.73.100.46:554//", "rtsp://admin:S@lom123456!@10.73.100.41:554//"
     #     ]
     
     # for i , cam  in enumerate(cam_list):
-    #     thread1 = ThreadCamera(i, cam)
+    #     thread1 = ThreadCamera(i+1, cam)
     #     threads.append(thread1)
 
     
     # for i in threads:
     #     i.join()
+
+
     # cam = Cameo('camera 1' ,"rtsp://admin:A12345678@10.73.100.47:554//", False)
     # cam.run(1)
 
