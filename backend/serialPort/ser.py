@@ -35,7 +35,6 @@ def send_websocket(data, group_name='chat_serial'):
                         "message": data,
                         }
     )
-    print('success')
 
 
 class SerialSocket:
@@ -55,17 +54,17 @@ class SerialSocket:
         )
 
         
-    @property
-    def connect(self):
-        portlist = []
-        for onep in self.ports:
-            if str(onep).find('USB0')!=-1:
-                portlist.append(str(onep))
+    # @property
+    # def connect(self):
+    #     portlist = []
+    #     for onep in self.ports:
+    #         if str(onep).find('USB0')!=-1:
+    #             portlist.append(str(onep))
 
-        self.serialinst.baudrate = self._boundrate
+    #     self.serialinst.baudrate = self._boundrate
 
-        self.serialinst.port = portlist[0].split(' ')[0]
-        self.serialinst.open()
+    #     self.serialinst.port = portlist[0].split(' ')[0]
+    #     self.serialinst.open()
          
     
 
@@ -82,12 +81,12 @@ class SerialSocket:
 
         while True:
             packet = self.serialinst.readline(12)
-
             if data:=int(packet.decode('utf-8')[2:-3]):
-
-                send_websocket(data) if data > 0 else data
-            elif data:=int(packet.decode('utf-8')[2:-3]):
-                send_websocket(data) if data > 0 else data
+                if data > 0:
+                    send_websocket(data)
+            elif data:=int(packet.decode('ascii')[2:-3]):
+                if data > 0:
+                    send_websocket(data)
             else:
                 pass
 

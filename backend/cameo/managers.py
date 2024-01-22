@@ -62,11 +62,12 @@ class CaptureManager(object):
         self._videoFilename = None
         self._videoEncoding = None
         self._videoWriter = None
+        self._frame_gpu = None
 
         self._startTime = None
         self._framesElapsed = 0
         self._fpsEstimate = None
-        self.textSpotter = cv2.text.TextDetectorCNN_create("textbox.prototxt", "TextBoxes_icdar13.caffemodel")
+        # self.textSpotter = cv2.text.TextDetectorCNN_create("textbox.prototxt", "TextBoxes_icdar13.caffemodel")
 
 
         # self.t1 = Thread(target=self.text_detect)
@@ -85,32 +86,15 @@ class CaptureManager(object):
     def frame(self):
         if self._enteredFrame and self._frame is None:
             _, self._frame = self._capture.retrieve(
-                    self._frame, self.channel)
-            # self._frame = cv2.pyrDown(self._frame, (.5, .5))
-            # async_to_sync(self.text_detect)
-
-            width, heigth = int(self._capture.get(3)), int(self._capture.get(4))
-            # point1 = (0, int(heigth/15))
-            # point2 = (int(width), int(heigth/15))
-
-            # point3 = (0, int(heigth/15))
-            # point4 = (int(width), int(heigth/15))
-
-            # point3 = (0, int(heigth-heigth/15))
-            # point4 = (int(width), int(int(heigth-heigth/10)))
-            # cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
-            # print(width)
-            # cv2.line(self._frame, point1, point2,(245, 238, 230), 5)
-
-            # self._frame = self._frame[0: int(heigth - heigth/5), 0: int(width)]
-            # self._frame = self._frame[int(heigth//15): int(heigth - heigth/15),  0: width]
-            # self.cut_frame(int(heigth//10), 300, width)
-            # cv2.line(self._frame,(0, int(heigth- heigth/10)),(int(width), int(heigth - heigth/10)),(245, 238, 230), 5)
-
-            # cv2.line(self._frame, point3,point4,(245, 238, 230), 10)
-            # self._frame = self._frame[0:int(width/2), 0: int(heigth/2) ]
+                    self._frame, self.channel) 
             
-        return self._frame
+            self._frame = cv2.pyrDown(self._frame) 
+            self._src = cv2.cuda.GpuMat()
+            
+            self._src.upload(self._frame)
+            # self._frame = 
+
+        return self._src.download()
     
 
     def cut_frame(self, y1, height, width):
@@ -118,6 +102,7 @@ class CaptureManager(object):
          x1 >> 0 ga teng 
          x+with >> umumiy widthga teng 
         '''
+
         frame = self._frame
         if frame is not None:
             return self._frame[y1: y1+height,  0: width]
@@ -129,9 +114,6 @@ class CaptureManager(object):
                     thickness, fill)
         return new_img
 
-    # @property
-    # def frame_detect(self):
-    #     pass
 
     @property
     def isWritingImage(self):
@@ -141,34 +123,7 @@ class CaptureManager(object):
     def isWritingVideo(self):
         return self._videoFilename is not None
     
-    # @property
-    # def draw_rect(self, img, top_left, bottom_right, color=(255, 0, 0),
-    #           thickness=2, fill=cv2.LINE_AA):
-    #     new_img = img.copy()
-    #     cv2.rectangle(new_img, top_left, bottom_right, color,
-    #                 thickness, fill)
-    #     return new_img
-    
 
-    def text_detect(self):
-        # self._frame_detect = self._frame
-        # width, heigth = int(self._capture.get(3)), int(self._capture.get(4))
-        
-        # frame = self.cut_frame(100, 400, width)
-
-
-        rects, outProbs = self.textSpotter.detect(self._frame)
-        # vis = self._frame.copy()
-        thres = 0.06
-
-        for r in range(numpy.shape(rects)[0]):
-            if outProbs[r] > thres:
-                rect = rects[r]
-                '''bu shart height 80 dan katta 105 dan kichik razmerdagi texni aniqlaydi '''
-                # if rect[3] > 80 and rect[3] < 105:
-                print(rect[3], '====================........')
-                self._frame_detect = self._frame
-                cv2.rectangle(self._frame_detect, (rect[0],rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (255, 0, 0), 2)
 
 
     def enterFrame(self):
@@ -179,7 +134,8 @@ class CaptureManager(object):
             'previous enterFrame() had no matching exitFrame()'
 
         if self._capture is not None:
-
+            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             self._enteredFrame = self._capture.grab()
 
     
@@ -225,27 +181,16 @@ class CaptureManager(object):
 
 
         # Draw to the window, if any.
-        if self.previewWindowManager is not None:
+        if self.frame is not None:
 
             if self.shouldMirrorPreview:
-                # self.text_detect
-
-                self._frame = numpy.fliplr(self._frame)
-                # frame = self.put_text(mirroredFrame)
+                self._src = numpy.fliplr(self._frame)
                 # self.text_detect()
                 # send_websocket(self._frame, group_name)
-                self.previewWindowManager.show(self._frame_detect)
-                self.previewWindowManager.show(self._frame_detect)
-            else:
-                # self.text_detect
+                # self.previewWindowManager.show(self._frame)
+            # else:
                 # frame = self.put_text(self._frame)
-                # send_websocket(frame, channel_name)
-                # self.text_detect()
-                self.previewWindowManager.show(self._frame_detect)
-
-
                 # send_websocket(self._frame, group_name)
-
                 # self.previewWindowManager.show(self._frame)
 
         # Write to the image file, if any.

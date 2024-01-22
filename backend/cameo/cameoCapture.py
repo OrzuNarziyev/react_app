@@ -44,7 +44,15 @@ r = redis.Redis(
 
 channel_layer = get_channel_layer()
 channel_name = 'chat_test'
+def send_websocket(frame, group_name='camera'):
+    _, src = cv2.imencode('.jpg', frame)
+    b64_image = base64.b64encode(src)
 
+    async_to_sync(channel_layer.group_send)(
+        group_name, {"type": f"chat.stream",
+                        "message": [b64_image],
+                        }
+    )
 
 class Cameo(object):
 
@@ -54,12 +62,17 @@ class Cameo(object):
     '''
 
     def __init__(self, window='1', url=0, mirror=True):
-        self._windowManager = WindowManager(f'camera {window}',
-                                            self.onKeypress)
+        # self._windowManager = WindowManager(f'camera {window}',
+        #                                     self.onKeypress)
         self.cap = cv2.VideoCapture(url)
-       
-        self._captureManager = CaptureManager(
-            self.cap,self._windowManager, shouldMirrorPreview=mirror)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+        
+
+        # self._captureManager = CaptureManager(
+        #     self.cap, shouldMirrorPreview=mirror)
+        
         
         # self._curveFilter = filters.BGRPortraCurveFilter()
 
@@ -68,31 +81,49 @@ class Cameo(object):
 
         """Run the main loop."""
 
-        self._windowManager.createWindow()
+        # self._windowManager.createWindow()
         while True:
+                # time.sleep(1/30)
                 
                 # time.sleep(1/25)
-                lock.acquire()
-                self._captureManager.enterFrame()
-                frame = self._captureManager.frame
+                # self._captureManager.enterFrame()
+                # frame = self._captureManager.frame
                 group_name = f"chat_camera{threadID}"
-                print(group_name)
-                lock.release()
-                # try:
-                #     send_websocket(frame=frame, channel_name=channel_name)
-                # except:
-                #     print('pass')
+                
+                success = self.cap.grab()
+                if success:
+                    src = cv2.cuda.GpuMat()
 
+                    ret, frame = self.cap.retrieve()
+                    # frame = cv2.pyrDown(frame)
+                    src.upload(frame)
+                    frame = src.download()
 
-                if frame is not None:
-                    # print('self')
-                    pass
-                    # await send_websocket(frame=frame, channel_name=channel_name)
+                    # gpu_frame = src.upload(frame)
+
+                    # frame = cv2.resize(frame, (0,0), fy=.3 , fx=.3)
+                    # frame = cv2.pyrDown(frame)
+                    # gray = cv2.cuda.cvtColor(gpu_frame, cv2.COLOR_BAYER_BG2BGR)
+                    # print(gray.shape)
+                    # frame = src.download()
+                    if frame is not None:
+                        try:
+
+                            # cv2.imshow(f'frame{threadID}', frame)
+                            # if cv2.waitKey(1) == ord('q'):
+                            #     break
+                            lock.acquire()
+                            send_websocket(frame=frame, group_name=group_name)
+                            lock.release()
+
+                        except:
+                            print('pass')
                     # filters.strokeEdges(frame, frame)
                     # self._curveFilter.apply(frame, frame)
-
-                self._captureManager.exitFrame(group_name)
-                self._windowManager.processEvents()
+                else:
+                    pass
+                # self._captureManager.exitFrame(group_name)
+                # self._windowManager.processEvents()
 
 
 
@@ -125,9 +156,8 @@ class ThreadCamera(threading.Thread):
         self.threadID = threadId
         self.url = url
         self.camera = Cameo(threadId, url, mirror=False)
+        print('keldi')
         self.start()
-
-
 
     def run(self) -> None:
         self.camera.run(self.threadID)
@@ -146,20 +176,23 @@ class ThreadSerial(threading.Thread):
 
 if __name__== "__main__":
     threads = []
-    cam_list = CameraIp.objects.all()
-    threadSerial = ThreadSerial()
+    cam_list = CameraIp.objects.filter(status=True)
 
-    thread1 = ThreadCamera(1, './video/10.73.100.92_01_20240118155802912.mp4')
-    thread1.join()
-
-
-    # for i, cam in enumerate(cam_list):
-    #     thread1 = ThreadCamera(int(i+1), str(cam))
-    #     threads.append(thread1)
+    for i, cam in enumerate(cam_list):
+        thread1 = ThreadCamera(int(i+1), str(cam))
+        threads.append(thread1)
     
 
-    # for i in threads:
-    #     i.join()
+    for i in threads:
+        i.join()
+
+    threadSerial = ThreadSerial()
+    threadSerial.join()
+
+    # thread1 = ThreadCamera(1, './video/10.73.100.92_01_20240118155802912.mp4')
+    # thread1.join()
+
+
 
         
     
