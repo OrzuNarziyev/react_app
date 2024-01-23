@@ -68,11 +68,8 @@ class Cameo(object):
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        
-
         # self._captureManager = CaptureManager(
         #     self.cap, shouldMirrorPreview=mirror)
-        
         
         # self._curveFilter = filters.BGRPortraCurveFilter()
 
@@ -95,9 +92,9 @@ class Cameo(object):
                     src = cv2.cuda.GpuMat()
 
                     ret, frame = self.cap.retrieve()
-                    # frame = cv2.pyrDown(frame)
-                    src.upload(frame)
-                    frame = src.download()
+                    frame = cv2.pyrDown(frame)
+                    # src.upload(frame)
+                    # frame = src.download()
 
                     # gpu_frame = src.upload(frame)
 
@@ -171,23 +168,25 @@ class ThreadSerial(threading.Thread):
 
     
     def run(self):
+        print('run')
         self.serial.run()
 
 
 if __name__== "__main__":
     threads = []
     cam_list = CameraIp.objects.filter(status=True)
-
+    threadSerial = ThreadSerial()
+    # threadSerial.join()
     for i, cam in enumerate(cam_list):
         thread1 = ThreadCamera(int(i+1), str(cam))
         threads.append(thread1)
     
-
+    
+    threadSerial.join()
     for i in threads:
         i.join()
 
-    threadSerial = ThreadSerial()
-    threadSerial.join()
+    
 
     # thread1 = ThreadCamera(1, './video/10.73.100.92_01_20240118155802912.mp4')
     # thread1.join()
