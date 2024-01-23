@@ -8,14 +8,15 @@ import cv2
 # cap = cv2.VideoCapture('rtsp://admin:S@lom123456!@10.73.100.41:554//',cv2.CV_8UC1)
 # cap = cv2.VideoCapture('/home/scale/Videos/10.73.100.92_01_20240118155802912.mp4',cv2.CV_8UC1)
 
-net = cv2.dnn.readNet("/home/scale/projects/reac_app/backend/cameo/textDetect/frozen_east_text_detection.pb")
+net = cv2.dnn.readNet('frozen_east_text_detection.pb')
+
 net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
 net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 def text_recognition(frame):
-	# image = cv2.pyrDown(image)
+	image = cv2.pyrDown(image)
 	
 	orig = frame
 	(H, W) = image.shape[:2]
@@ -24,12 +25,9 @@ def text_recognition(frame):
 	rW = W / float(newW)
 	rH = H / float(newH)
 
-	image = cv2.resize(frame, (newW, newH))
-	
+	image = cv2.resize(frame, (newW, newH))	
 
 	(H, W) = image.shape[:2]
-
-
 	layerNames = [
 		"feature_fusion/Conv_7/Sigmoid",
 		"feature_fusion/concat_3"]
@@ -37,7 +35,6 @@ def text_recognition(frame):
 
 	blob = cv2.dnn.blobFromImage(image, 1.0, (W, H),
 		(123.68, 116.78, 103.94), swapRB=True, crop=False)
-
 
 	net.setInput(blob)
 	(scores, geometry) = net.forward(layerNames)

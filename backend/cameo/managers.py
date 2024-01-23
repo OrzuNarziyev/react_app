@@ -1,7 +1,7 @@
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 import cv2
-import numpy
+import numpy as np
 import time
 import base64
 import sys
@@ -25,7 +25,6 @@ from threading import Thread
 
 # local modules
 
-from textDetect.text_detection import text_recognition
 
 r = redis.Redis(
     host=settings.REDIS_HOST,
@@ -38,9 +37,15 @@ channel_layer = get_channel_layer()
 
 from asgiref.sync import async_to_sync
 
+def send_websocket(frame, group_name='camera'):
+    _, src = cv2.imencode('.jpg', frame)
+    b64_image = base64.b64encode(src)
 
-
-
+    async_to_sync(channel_layer.group_send)(
+        group_name, {"type": f"chat.stream",
+                        "message": [b64_image],
+                        }
+    )
 
 
 class CaptureManager(object):
@@ -83,19 +88,9 @@ class CaptureManager(object):
             _, self._frame = self._capture.retrieve(
                     self._frame, self.channel) 
             
-            self._frame = cv2.UMat(cv2.pyrDown(self._frame)).get()
+            self._frame = cv2.pyrDown(self._frame)
         return self._frame
     
-    @property
-    def send_websocket(frame, group_name='camera'):
-        _, src = cv2.imencode('.jpg', frame)
-        b64_image = base64.b64encode(src)
-
-        async_to_sync(channel_layer.group_send)(
-            group_name, {"type": f"chat.stream",
-                            "message": [b64_image],
-                            }
-        )
 
 
     def cut_frame(self, y1, height):
@@ -179,16 +174,15 @@ class CaptureManager(object):
         if self.frame is not None:
 
             if self.shouldMirrorPreview:
-                flip = numpy.fliplr(self._frame)
-                self._frame = text_recognition(flip)
-                lock.acquire()
-                self.send_websocket(self._frame, group_name)
-                lock.release()
-            else:
-                self._frame = text_recognition(self._frame)
-                lock.acquire()
-                self.send_websocket(self._frame, group_name)
-                lock.release()
+                flip = np.fliplr(self._frame)
+                self._frame = flip
+                # lock.acquire()
+                # send_websocket(self._frame, group_name)
+                # lock.release()
+            # else:
+            #     lock.acquire()
+            #     send_websocket(self._frame, group_name)
+            #     lock.release()
 
         # Write to the image file, if any.
         if self.isWritingImage:
@@ -226,7 +220,7 @@ class CaptureManager(object):
 
         if self._videoWriter is None:
             fps = self._capture.get(cv2.CAP_PROP_FPS)
-            if numpy.isnan(fps) or fps <= 0.0:
+            if np.isnan(fps) or fps <= 0.0:
                 # The capture's FPS is unknown so use an estimate.
                 if self._framesElapsed < 20:
                     # Wait until more frames elapse so that the
