@@ -10,7 +10,8 @@ sys.path.append('/home/scale/projects/react_app/backend')
 from asgiref.sync import async_to_sync
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-
+from threading import Lock
+lock = Lock()
 
 import django
 django.setup()
@@ -22,6 +23,10 @@ import redis
 from django.contrib.auth.models import User
 from threading import Thread
 
+# local modules
+
+from textDetect.text_detection import text_recognition
+
 r = redis.Redis(
     host=settings.REDIS_HOST,
     db=settings.REDIS_DB,
@@ -32,15 +37,8 @@ channel_layer = get_channel_layer()
 # channel_name = 'chat_test'
 
 from asgiref.sync import async_to_sync
-def send_websocket(frame, group_name='camera'):
-    _, src = cv2.imencode('.jpg', frame)
-    b64_image = base64.b64encode(src)
 
-    async_to_sync(channel_layer.group_send)(
-        group_name, {"type": f"chat.stream",
-                        "message": [b64_image],
-                        }
-    )
+
 
 
 
@@ -67,10 +65,7 @@ class CaptureManager(object):
         self._startTime = None
         self._framesElapsed = 0
         self._fpsEstimate = None
-        # self.textSpotter = cv2.text.TextDetectorCNN_create("textbox.prototxt", "TextBoxes_icdar13.caffemodel")
 
-
-        # self.t1 = Thread(target=self.text_detect)
 
     @property
     def channel(self):
@@ -88,16 +83,22 @@ class CaptureManager(object):
             _, self._frame = self._capture.retrieve(
                     self._frame, self.channel) 
             
-            self._frame = cv2.pyrDown(self._frame) 
-            self._src = cv2.cuda.GpuMat()
-            
-            self._src.upload(self._frame)
-            # self._frame = 
-
-        return self._src.download()
+            self._frame = cv2.UMat(cv2.pyrDown(self._frame)).get()
+        return self._frame
     
+    @property
+    def send_websocket(frame, group_name='camera'):
+        _, src = cv2.imencode('.jpg', frame)
+        b64_image = base64.b64encode(src)
 
-    def cut_frame(self, y1, height, width):
+        async_to_sync(channel_layer.group_send)(
+            group_name, {"type": f"chat.stream",
+                            "message": [b64_image],
+                            }
+        )
+
+
+    def cut_frame(self, y1, height):
         '''point format >> >> [y: y+h]
          x1 >> 0 ga teng 
          x+with >> umumiy widthga teng 
@@ -105,7 +106,8 @@ class CaptureManager(object):
 
         frame = self._frame
         if frame is not None:
-            return self._frame[y1: y1+height,  0: width]
+            return self._frame[y1: y1+height,  0:]
+
 
     def draw_rect(img, top_left, bottom_right, color,
         thickness, fill=cv2.LINE_AA):
@@ -134,8 +136,8 @@ class CaptureManager(object):
             'previous enterFrame() had no matching exitFrame()'
 
         if self._capture is not None:
-            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            # self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            # self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             self._enteredFrame = self._capture.grab()
 
     
@@ -173,25 +175,20 @@ class CaptureManager(object):
             self._fpsEstimate =  self._framesElapsed / timeElapsed
         self._framesElapsed += 1
 
-        # if (self.frame is not None):
-        #     t1 = Thread(target=self.text_detect).start()
-
-            # t1.join()
-            # self.text_detect()
-
-
         # Draw to the window, if any.
         if self.frame is not None:
 
             if self.shouldMirrorPreview:
-                self._src = numpy.fliplr(self._frame)
-                # self.text_detect()
-                # send_websocket(self._frame, group_name)
-                # self.previewWindowManager.show(self._frame)
-            # else:
-                # frame = self.put_text(self._frame)
-                # send_websocket(self._frame, group_name)
-                # self.previewWindowManager.show(self._frame)
+                flip = numpy.fliplr(self._frame)
+                self._frame = text_recognition(flip)
+                lock.acquire()
+                self.send_websocket(self._frame, group_name)
+                lock.release()
+            else:
+                self._frame = text_recognition(self._frame)
+                lock.acquire()
+                self.send_websocket(self._frame, group_name)
+                lock.release()
 
         # Write to the image file, if any.
         if self.isWritingImage:

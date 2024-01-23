@@ -2,7 +2,6 @@ import cv2
 import numpy
 import scipy.interpolate
 
-
 def createLookupArray(func, length=256):
     """Return a lookup for whole-number inputs to a function.
 

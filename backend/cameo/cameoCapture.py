@@ -1,4 +1,6 @@
 import cv2
+import numpy as np
+from imutils.object_detection import non_max_suppression
 import filters
 from managers import WindowManager, CaptureManager
 
@@ -36,6 +38,8 @@ lock = Lock()
 
 
 
+
+
 r = redis.Redis(
     host=settings.REDIS_HOST,
     db=settings.REDIS_DB,
@@ -54,6 +58,11 @@ def send_websocket(frame, group_name='camera'):
                         }
     )
 
+# config for dnn 
+net = cv2.dnn.readNet("frozen_east_text_detection.pb")
+net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
 class Cameo(object):
 
     '''
@@ -68,8 +77,8 @@ class Cameo(object):
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        # self._captureManager = CaptureManager(
-        #     self.cap, shouldMirrorPreview=mirror)
+        self._captureManager = CaptureManager(
+            self.cap, shouldMirrorPreview=mirror)
         
         # self._curveFilter = filters.BGRPortraCurveFilter()
 
@@ -80,19 +89,13 @@ class Cameo(object):
 
         # self._windowManager.createWindow()
         while True:
-                # time.sleep(1/30)
-                
-                # time.sleep(1/25)
-                # self._captureManager.enterFrame()
-                # frame = self._captureManager.frame
+                self._captureManager.enterFrame()
+                frame = self._captureManager.frame
                 group_name = f"chat_camera{threadID}"
-                
-                success = self.cap.grab()
-                if success:
-                    src = cv2.cuda.GpuMat()
-
-                    ret, frame = self.cap.retrieve()
-                    frame = cv2.pyrDown(frame)
+                # success = self.cap.grab()
+                # if success:
+                #     ret, frame = self.cap.retrieve()
+                #     frame = cv2.pyrDown(frame)
                     # src.upload(frame)
                     # frame = src.download()
 
@@ -103,23 +106,19 @@ class Cameo(object):
                     # gray = cv2.cuda.cvtColor(gpu_frame, cv2.COLOR_BAYER_BG2BGR)
                     # print(gray.shape)
                     # frame = src.download()
-                    if frame is not None:
-                        try:
-
-                            # cv2.imshow(f'frame{threadID}', frame)
-                            # if cv2.waitKey(1) == ord('q'):
-                            #     break
-                            lock.acquire()
-                            send_websocket(frame=frame, group_name=group_name)
-                            lock.release()
-
-                        except:
-                            print('pass')
+                if frame is not None:
+                    pass
+                    # try:
+                    #     lock.acquire()
+                    #     send_websocket(frame=frame, group_name=group_name)
+                    #     lock.release()
+                    # except:
+                    #     print('pass')
                     # filters.strokeEdges(frame, frame)
                     # self._curveFilter.apply(frame, frame)
                 else:
                     pass
-                # self._captureManager.exitFrame(group_name)
+                self._captureManager.exitFrame(group_name)
                 # self._windowManager.processEvents()
 
 
