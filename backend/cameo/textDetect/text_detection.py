@@ -31,8 +31,7 @@ def text_recognition(frame):
 	layerNames = [
 		"feature_fusion/Conv_7/Sigmoid",
 		"feature_fusion/concat_3"]
-
-
+	
 	blob = cv2.dnn.blobFromImage(image, 1.0, (W, H),
 		(123.68, 116.78, 103.94), swapRB=True, crop=False)
 

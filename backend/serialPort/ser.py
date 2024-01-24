@@ -74,10 +74,12 @@ class SerialSocket:
         for onep in self.ports:
             if str(onep).find('USB0')!=-1:
                 portlist.append(str(onep))
-
-        self.serialinst.baudrate = self._boundrate
-        self.serialinst.port = portlist[0].split(' ')[0]
-        self.serialinst.open()
+        try:
+            self.serialinst.baudrate = self._boundrate
+            self.serialinst.port = portlist[0].split(' ')[0]
+            self.serialinst.open()
+        except:
+            pass
 
         while True:
             packet = self.serialinst.readline(12)
