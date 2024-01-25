@@ -45,6 +45,7 @@ net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
 
 def text_det(image):
+    start = time.time()
     # image = cv2.pyrDown(image)
     orig = image
     (H, W) = image.shape[:2]
@@ -132,9 +133,11 @@ def text_det(image):
             continue
 
         # draw the bounding box on the image
-        cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 3)
+        cv2.rectangle(orig, (startX-20, startY-20), (endX+20, endY+20), (0, 255, 0), 3)
         cv2.putText(orig, 'H:%d W:%d ' % (int(endY - startY), int(endX - startX)), (startX, startY), cv2.FONT_HERSHEY_PLAIN,
                     1.0, (200, 0, 0), thickness=1)
+    end_time = time.time()
+    # print(end_time-start)
     return orig
 
     # end = time.time()
@@ -182,23 +185,26 @@ class Cameo(object):
 
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
+        group_name = f'chat_camera{window}'
         self._captureManager = CaptureManager(
-            self.cap, shouldMirrorPreview=mirror)
+            self.cap, shouldMirrorPreview=mirror, group_name=group_name)
         # config for dnn
+
 
         # self._curveFilter = filters.BGRPortraCurveFilter()
 
-    def run(self, threadID=None):
+    def run(self):
 
         """Run the main loop."""
 
         # self._windowManager.createWindow()
 
         while True:
+            time.sleep(0.04)
             self._captureManager.enterFrame()
+            # group_name = f"chat_camera{threadID}"
+
             frame = self._captureManager.frame
-            group_name = f"chat_camera{threadID}"
             # success = self.cap.grab()
             # if success:
             #     ret, frame = self.cap.retrieve()
@@ -217,16 +223,21 @@ class Cameo(object):
             if frame is not None:
                 # frame = text_recognition(image=frame)
                 try:
-                    lock.acquire()
-                    send_websocket(frame=frame, group_name=group_name)
-                    lock.release()
+                    pass
+                    # lock.acquire()
+                    # start = time.time()
+                    # roi = text_det(frame)
+                    # send_websocket(frame=roi, group_name=group_name)
+                    # end_time = time.time()
+                    # print(end_time-start)
+                    # lock.release()
                 except:
                     print('pass')
                 # filters.strokeEdges(frame, frame)
                 # self._curveFilter.apply(frame, frame)
             else:
                 pass
-            self._captureManager.exitFrame(group_name)
+            self._captureManager.exitFrame()
             # self._windowManager.processEvents()
 
     def onKeypress(self, keycode):
@@ -260,7 +271,7 @@ class ThreadCamera(threading.Thread):
         self.start()
 
     def run(self) -> None:
-        self.camera.run(self.threadID)
+        self.camera.run()
 
 
 class ThreadSerial(threading.Thread):

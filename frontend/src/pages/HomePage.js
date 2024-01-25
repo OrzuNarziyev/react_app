@@ -191,7 +191,7 @@ const HomePage = () => {
                 </div>
             </div>
             <div className="grid grid-cols-3 gap-5 my-5">
-                <div className="col-span-2 grid 2xl:grid-cols-1 xl:grid-cols-1 gap-3">
+                <div className="col-span-2 grid 2xl:grid-cols-2 xl:grid-cols-1 gap-3">
 
                     {content}
 

@@ -23,6 +23,7 @@ from channels.layers import get_channel_layer
 import redis
 from django.contrib.auth.models import User
 from threading import Thread
+import asyncio
 
 # local modules
 
@@ -31,6 +32,20 @@ from threading import Thread
 net = cv2.dnn.readNet("backend/cameo/frozen_east_text_detection.pb")
 net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
 net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+
+class DetectThread(Thread):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start()
+    
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+    
+    def join(self):
+        Thread.join(self)
+        return self._return
 
 
 
@@ -154,15 +169,17 @@ def send_websocket(frame, group_name='camera'):
 
 
 class CaptureManager(object):
+    count = 0
 
     def __init__(self, capture, previewWindowManager = None,
-                 shouldMirrorPreview = True):
+                 shouldMirrorPreview = True, group_name=None):
 
         self.previewWindowManager = previewWindowManager
         self.shouldMirrorPreview = shouldMirrorPreview
-
+        CaptureManager.count +=1
         self._capture = capture
-        self._channel = 0
+
+        # self._channel = 0
         self._enteredFrame = False
         self._frame = None
         self._frame_detect = None
@@ -170,30 +187,39 @@ class CaptureManager(object):
         self._videoFilename = None
         self._videoEncoding = None
         self._videoWriter = None
-        self._frame_gpu = None
 
         self._startTime = None
         self._framesElapsed = 0
         self._fpsEstimate = None
+        self._group_name = group_name
 
 
     @property
     def channel(self):
         return self._channel
 
-    @channel.setter
-    def channel(self, value):
-        if self._channel != value:
-            self._channel = value
-            self._frame = None
+    # @channel.setter
+    # def channel(self, value):
+    #     if self._channel != value:
+    #         self._channel = value
+    #         self._frame = None
 
     @property
     def frame(self):
         if self._enteredFrame and self._frame is None:
-            _, self._frame = self._capture.retrieve(
-                    self._frame, self.channel) 
+            # _, self._frame = self._capture.retrieve(
+            #         self._frame, self.channel) 
+            _, self._frame = self._capture.read()
+
+
+
             
+
             self._frame = cv2.pyrDown(self._frame)
+
+          
+ 
+
         return self._frame
     
 
@@ -209,12 +235,12 @@ class CaptureManager(object):
             return self._frame[y1: y1+height,  0:]
 
 
-    def draw_rect(img, top_left, bottom_right, color,
-        thickness, fill=cv2.LINE_AA):
-        new_img = img.copy()
-        cv2.rectangle(new_img, top_left, bottom_right, color,
-                    thickness, fill)
-        return new_img
+    # def draw_rect(img, top_left, bottom_right, color,
+    #     thickness, fill=cv2.LINE_AA):
+    #     new_img = img.copy()
+    #     cv2.rectangle(new_img, top_left, bottom_right, color,
+    #                 thickness, fill)
+    #     return new_img
 
 
     @property
@@ -225,6 +251,8 @@ class CaptureManager(object):
     def isWritingVideo(self):
         return self._videoFilename is not None
     
+    def det(self):
+        self._frame = text_det(self._frame)
 
 
 
@@ -258,7 +286,7 @@ class CaptureManager(object):
     #     return image
 
 
-    def exitFrame(self, group_name):
+    def exitFrame(self):
         """Draw to the window. Write to files. Release the frame."""
 
         # Check whether any grabbed frame is retrievable.
@@ -277,6 +305,28 @@ class CaptureManager(object):
 
         # Draw to the window, if any.
         if self.frame is not None:
+
+            start = time.time()
+            det = text_det(self.frame)
+
+            
+            # threadDetect = DetectThread(target=text_det, args=(self._frame,))
+            # j = threadDetect.join()
+            # print(j)
+            # detectThread = Thread(target=self.text_det, args=(self,self._frame))
+            # detectThread.start()
+
+            # self.text_det(self._frame)
+            # send_websocket(cv2.pyrDown(self._frame), self._group_name)
+            
+            socketThread = Thread(target=send_websocket, args=(self._frame, self._group_name))
+            socketThread.start()
+
+           
+
+            end = time.time()
+            print(end-start)
+
 
             if self.shouldMirrorPreview:
                 flip = np.fliplr(self._frame)
@@ -343,6 +393,99 @@ class CaptureManager(object):
 
         self._videoWriter.write(self._frame)
 
+    def text_det(self, image):
+    # image = cv2.pyrDown(image)
+        orig = image
+        (H, W) = image.shape[:2]
+
+        (newW, newH) = (640, 320)
+
+        rW = W / float(newW)
+        rH = H / float(newH)
+
+        image = cv2.resize(image, (newW, newH))
+
+        (H, W) = image.shape[:2]
+
+        layerNames = [
+            "feature_fusion/Conv_7/Sigmoid",
+            "feature_fusion/concat_3"]
+
+        blob = cv2.dnn.blobFromImage(image, 1.0, (W, H),
+                                    (123.68, 116.78, 103.94), swapRB=True, crop=False)
+
+        net.setInput(blob)
+        (scores, geometry) = net.forward(layerNames)
+
+        (numRows, numCols) = scores.shape[2:4]
+        rects = []
+        confidences = []
+
+        for y in range(0, numRows):
+
+            scoresData = scores[0, 0, y]
+            xData0 = geometry[0, 0, y]
+            xData1 = geometry[0, 1, y]
+            xData2 = geometry[0, 2, y]
+            xData3 = geometry[0, 3, y]
+            anglesData = geometry[0, 4, y]
+
+            # ustunlar soni bo'ylab aylanish
+            for x in range(0, numCols):
+                # agar bizning ballimiz etarli ehtimolga ega bo'lmasa, unga e'tibor bermang
+                if scoresData[x] < 0.5:
+                    continue
+
+                # ofset faktorini bizning natijaviy xususiyat xaritalarimiz kabi hisoblang
+                # kiritilgan rasmdan 4x kichikroq boʻlsin
+                (offsetX, offsetY) = (x * 4.0, y * 4.0)
+
+                # extract the rotation angle for the prediction and then
+                # compute the sin and cosine
+
+                angle = anglesData[x]
+                cos = np.cos(angle)
+                sin = np.sin(angle)
+
+                # use the geometry volume to derive the width and height of
+                # the bounding box
+                h = xData0[x] + xData2[x]
+                w = xData1[x] + xData3[x]
+
+                # compute both the starting and ending (x, y)-coordinates for
+                # the text prediction bounding box
+                endX = int(offsetX + (cos * xData1[x]) + (sin * xData2[x]))
+                endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
+                startX = int(endX - w)
+                startY = int(endY - h)
+
+                # add the bounding box coordinates and probability score to
+                # our respective lists
+                rects.append((startX, startY, endX, endY))
+                confidences.append(scoresData[x])
+        boxes = non_max_suppression(np.array(rects), probs=confidences)
+
+        for (startX, startY, endX, endY) in boxes:
+            startX = int(startX * rW)
+            startY = int(startY * rH)
+            endX = int(endX * rW)
+            endY = int(endY * rH)
+
+            h = abs(endY - startY)
+            w = abs(endX - startX)
+
+            if not (70 < h < 110):
+                continue
+
+            if w < 100:
+                continue
+
+            # draw the bounding box on the image
+            cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 3)
+            cv2.putText(orig, 'H:%d W:%d ' % (int(endY - startY), int(endX - startX)), (startX, startY), cv2.FONT_HERSHEY_PLAIN,
+                        1.0, (200, 0, 0), thickness=1)
+        self._frame = orig
+
 
 class WindowManager(object):
 
@@ -371,3 +514,5 @@ class WindowManager(object):
         keycode = cv2.waitKey(1)
         if self.keypressCallback is not None and keycode != -1:
             self.keypressCallback(keycode)
+
+
