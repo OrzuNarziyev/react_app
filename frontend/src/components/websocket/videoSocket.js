@@ -34,6 +34,7 @@ const VideoFrame = (props) => {
                 <h3>Camera {id}</h3>
                 <div className="mt-3">
                     <div className="aspect-w-2 aspect-h-1">
+                        
 
                         <img className="object-fit" src={image} alt="Image not found" />
 

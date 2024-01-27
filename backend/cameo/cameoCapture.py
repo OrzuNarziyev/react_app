@@ -36,111 +36,124 @@ from threading import Lock
 
 lock = Lock()
 
-net = cv2.dnn.readNet("backend/cameo/frozen_east_text_detection.pb")
-net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+# net = cv2.dnn.readNetFromCaffe('backend/cameo/textbox.prototxt', 'backend/cameo/TextBoxes_icdar13.caffemodel')
 
 
 
+# def text_det(image, index):
+# 	start = time.time()
+# 	# image = cv2.UMat(image)
+# 	# image = cv2.pyrDown(image)
+# 	image = image.get()
+	
+# 	orig = image
+# 	(H, W) = image.shape[:2]
+
+# 	(newW, newH) = (640, 320)
+# 	rW = W / float(newW)
+# 	rH = H / float(newH)
+
+# 	image = cv2.resize(image, (newW, newH))
+	
+
+# 	(H, W) = image.shape[:2]
 
 
-def text_det(image):
-    start = time.time()
-    # image = cv2.pyrDown(image)
-    orig = image
-    (H, W) = image.shape[:2]
+# 	layerNames = [
+# 		"feature_fusion/Conv_7/Sigmoid",
+# 		"feature_fusion/concat_3"]
 
-    (newW, newH) = (640, 320)
 
-    rW = W / float(newW)
-    rH = H / float(newH)
+# 	blob = cv2.dnn.blobFromImage(image, 1.0, (W, H),
+# 		(123.68, 116.78, 103.94), swapRB=True, crop=False)
 
-    image = cv2.resize(image, (newW, newH))
 
-    (H, W) = image.shape[:2]
+# 	net.setInput(blob)
+# 	(scores, geometry) = net.forward(layerNames)
 
-    layerNames = [
-        "feature_fusion/Conv_7/Sigmoid",
-        "feature_fusion/concat_3"]
+# 	(numRows, numCols) = scores.shape[2:4]
+# 	rects = []
+# 	confidences = []
 
-    blob = cv2.dnn.blobFromImage(image, 1.0, (W, H),
-                                 (123.68, 116.78, 103.94), swapRB=True, crop=False)
+# 	for y in range(0, numRows):
 
-    net.setInput(blob)
-    (scores, geometry) = net.forward(layerNames)
+# 		scoresData = scores[0, 0, y]
+# 		xData0 = geometry[0, 0, y]
+# 		xData1 = geometry[0, 1, y]
+# 		xData2 = geometry[0, 2, y]
+# 		xData3 = geometry[0, 3, y]
+# 		anglesData = geometry[0, 4, y]
 
-    (numRows, numCols) = scores.shape[2:4]
-    rects = []
-    confidences = []
 
-    for y in range(0, numRows):
+# 		# ustunlar soni bo'ylab aylanish
+# 		for x in range(0, numCols):
+# 			# agar bizning ballimiz etarli ehtimolga ega bo'lmasa, unga e'tibor bermang
+# 			if scoresData[x] < 0.5:
 
-        scoresData = scores[0, 0, y]
-        xData0 = geometry[0, 0, y]
-        xData1 = geometry[0, 1, y]
-        xData2 = geometry[0, 2, y]
-        xData3 = geometry[0, 3, y]
-        anglesData = geometry[0, 4, y]
+# 				continue
 
-        # ustunlar soni bo'ylab aylanish
-        for x in range(0, numCols):
-            # agar bizning ballimiz etarli ehtimolga ega bo'lmasa, unga e'tibor bermang
-            if scoresData[x] < 0.5:
-                continue
 
-            # ofset faktorini bizning natijaviy xususiyat xaritalarimiz kabi hisoblang
-            # kiritilgan rasmdan 4x kichikroq boʻlsin
-            (offsetX, offsetY) = (x * 4.0, y * 4.0)
+# 			# ofset faktorini bizning natijaviy xususiyat xaritalarimiz kabi hisoblang
+# 			# kiritilgan rasmdan 4x kichikroq boʻlsin
+# 			(offsetX, offsetY) = (x * 4.0, y * 4.0)
 
-            # extract the rotation angle for the prediction and then
-            # compute the sin and cosine
 
-            angle = anglesData[x]
-            cos = np.cos(angle)
-            sin = np.sin(angle)
+# 			# extract the rotation angle for the prediction and then
+# 			# compute the sin and cosine
 
-            # use the geometry volume to derive the width and height of
-            # the bounding box
-            h = xData0[x] + xData2[x]
-            w = xData1[x] + xData3[x]
+# 			angle = anglesData[x]
+# 			cos = np.cos(angle)
+# 			sin = np.sin(angle)
 
-            # compute both the starting and ending (x, y)-coordinates for
-            # the text prediction bounding box
-            endX = int(offsetX + (cos * xData1[x]) + (sin * xData2[x]))
-            endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
-            startX = int(endX - w)
-            startY = int(endY - h)
+# 			# use the geometry volume to derive the width and height of
+# 			# the bounding box
+# 			h = xData0[x] + xData2[x]
+# 			w = xData1[x] + xData3[x]
 
-            # add the bounding box coordinates and probability score to
-            # our respective lists
-            rects.append((startX, startY, endX, endY))
-            confidences.append(scoresData[x])
-    boxes = non_max_suppression(np.array(rects), probs=confidences)
+# 			# compute both the starting and ending (x, y)-coordinates for
+# 			# the text prediction bounding box
+# 			endX = int(offsetX + (cos * xData1[x]) + (sin * xData2[x]))
+# 			endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
+# 			startX = int(endX - w)
+# 			startY = int(endY - h)
 
-    for (startX, startY, endX, endY) in boxes:
-        startX = int(startX * rW)
-        startY = int(startY * rH)
-        endX = int(endX * rW)
-        endY = int(endY * rH)
+# 			# add the bounding box coordinates and probability score to
+# 			# our respective lists
+# 			rects.append((startX, startY, endX, endY))
+# 			confidences.append(scoresData[x])
+# 	boxes = non_max_suppression(np.array(rects),probs=confidences)
 
-        h = abs(endY - startY)
-        w = abs(endX - startX)
+# 	for (startX, startY, endX, endY) in boxes:
+# 		# if not (60 < abs(startY-endY) < 100):
+# 		# 	continue
 
-        if not (70 < h < 110):
-            continue
 
-        if w < 100:
-            continue
 
-        # draw the bounding box on the image
-        cv2.rectangle(orig, (startX-20, startY-20), (endX+20, endY+20), (0, 255, 0), 3)
-        cv2.putText(orig, 'H:%d W:%d ' % (int(endY - startY), int(endX - startX)), (startX, startY), cv2.FONT_HERSHEY_PLAIN,
-                    1.0, (200, 0, 0), thickness=1)
-    end_time = time.time()
-    # print(end_time-start)
-    return orig
+# 		startX = int(startX * rW)
+# 		startY = int(startY * rH)
+# 		endX = int(endX * rW)
+# 		endY = int(endY * rH)
 
-    # end = time.time()
+# 		h = abs(endY - startY)
+# 		w = abs(endX - startX)
+
+# 		if not (70 < h < 110):
+# 			continue
+
+# 		if w < 100:
+# 			continue
+
+
+# 		# draw the bounding box on the image
+# 		cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 3)
+# 		cv2.putText(orig, 'H:%d W:%d '%(int(endY-startY), int(endX-startX)), (startX, startY), cv2.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)
+# 	end = time.time()
+# 	print(end-start)
+# 	# send_websocket(orig, index)
+# 	group_name = f'chat_camera{index}'
+# 	# send_websocket(frame=orig, group_name=group_name)
+# 	# cv2.imshow(f'frame{index}', orig)
+# 	return orig
 
 
 # print(end-start)
@@ -177,57 +190,50 @@ class Cameo(object):
     camera - index camera or url rtsp
     '''
 
-    def __init__(self, window='1', url=0, mirror=True):
+    def __init__(self, window='1', url=0, mirror=True, net=None):
         # self._windowManager = WindowManager(f'camera {window}',
         #                                     self.onKeypress)
 
-        self.cap = cv2.VideoCapture(url)
+        self.cap = cv2.VideoCapture(url, cv2.CAP_ANY)
 
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         group_name = f'chat_camera{window}'
         self._captureManager = CaptureManager(
-            self.cap, shouldMirrorPreview=mirror, group_name=group_name)
+            self.cap, shouldMirrorPreview=mirror, group_name=group_name, net=net)
+        
         # config for dnn
 
+        self.net = cv2.dnn.readNet("backend/cameo/frozen_east_text_detection.pb")
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
         # self._curveFilter = filters.BGRPortraCurveFilter()
 
-    def run(self):
+    def run(self, threadID):
 
         """Run the main loop."""
 
         # self._windowManager.createWindow()
 
         while True:
-            time.sleep(0.04)
+            # time.sleep(0.04)
             self._captureManager.enterFrame()
             # group_name = f"chat_camera{threadID}"
+            # success = self.cap.grab()
+
+            # if success:
+            #     _, frame = self.cap.read()
+            #     frame = cv2.pyrDown(frame)
 
             frame = self._captureManager.frame
-            # success = self.cap.grab()
-            # if success:
-            #     ret, frame = self.cap.retrieve()
-            #     frame = cv2.pyrDown(frame)
-            # src.upload(frame)
-            # frame = src.download()
-
-            # gpu_frame = src.upload(frame)
-
-            # frame = cv2.resize(frame, (0,0), fy=.3 , fx=.3)
-            # frame = cv2.pyrDown(frame)
-            # gray = cv2.cuda.cvtColor(gpu_frame, cv2.COLOR_BAYER_BG2BGR)
-            # print(gray.shape)
-            # frame = src.download()
 
             if frame is not None:
-                # frame = text_recognition(image=frame)
                 try:
                     pass
                     # lock.acquire()
                     # start = time.time()
-                    # roi = text_det(frame)
-                    # send_websocket(frame=roi, group_name=group_name)
+                    # # roi = text_det(frame)
+                    # # result = text_det(frame, 2)
+                    # send_websocket(frame=frame, group_name=group_name)
                     # end_time = time.time()
                     # print(end_time-start)
                     # lock.release()
@@ -266,12 +272,15 @@ class ThreadCamera(threading.Thread):
         threading.Thread.__init__(self)
         self.threadID = threadId
         self.url = url
-        self.camera = Cameo(threadId, url, mirror=False)
+        net = cv2.dnn.readNet("backend/cameo/frozen_east_text_detection.pb")
+        net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        self.camera = Cameo(threadId, url, mirror=False, net=net)
         print('keldi')
-        self.start()
+        # self.start()
 
     def run(self) -> None:
-        self.camera.run()
+        self.camera.run(self.threadID)
 
 
 class ThreadSerial(threading.Thread):
@@ -289,16 +298,18 @@ if __name__ == "__main__":
     threads = []
 
     cam_list = CameraIp.objects.filter(status=True)
-    threadSerial = ThreadSerial()
+    # threadSerial = ThreadSerial()
+
 
     # threadSerial.join()
     for i, cam in enumerate(cam_list):
         thread1 = ThreadCamera(int(i + 1), str(cam))
+        thread1.start()
         threads.append(thread1)
     # thread1 = ThreadCamera(int(1), str('./video/10.73.100.92_01_20240118155802912.mp4'))
     # thread1.join()
 
-    threadSerial.join()
+    # threadSerial.join()
     for i in threads:
         i.join()
 
