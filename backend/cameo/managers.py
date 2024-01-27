@@ -334,14 +334,16 @@ class CaptureManager(object):
             # _, self._frame = self._capture.retrieve(
             #         self._frame, self.channel) 
             _, self._frame = self._capture.read()
+            # self._frame = cv2.pyrDown(self._frame)
+            self._frame = cv2.resize(self._frame, (640,480))
+            # print(self._frame.shape)
 
-            self._frame_umat = cv2.UMat(self._frame)
+            # self._frame_umat = cv2.UMat(self._frame)
             # self._frame = asyncio.run(text_det(self._frame_umat.get()))
             # treadDetect = DetectThread(target=text_det, args=(self._frame_umat.get(), self._net))
            
             # asyncio.run(text_det(self._frame_umat.get(), self._net))
 
-            # self._frame = cv2.pyrDown(self._frame)
             # print(self._frame)
             # self._gpu_frame.upload(self._frame)
             # try:
@@ -382,7 +384,7 @@ class CaptureManager(object):
 
 
 
-        return self._frame_umat.get()
+        return self._frame
     
 
 

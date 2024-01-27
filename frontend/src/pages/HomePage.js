@@ -140,7 +140,7 @@ const HomePage = () => {
 
 
     const content = []
-    for (let index = 1; index <= 2; index++) {
+    for (let index = 1; index <= 4; index++) {
         content.push(
             <VideoFrame id={index} key={index} />
         )

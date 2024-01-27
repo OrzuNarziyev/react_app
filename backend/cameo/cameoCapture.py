@@ -202,9 +202,9 @@ class Cameo(object):
         
         # config for dnn
 
-        self.net = cv2.dnn.readNet("backend/cameo/frozen_east_text_detection.pb")
-        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        # self.net = cv2.dnn.readNet("backend/cameo/frozen_east_text_detection.pb")
+        # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        # self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
         # self._curveFilter = filters.BGRPortraCurveFilter()
 
@@ -274,7 +274,7 @@ class ThreadCamera(threading.Thread):
         self.url = url
         net = cv2.dnn.readNet("backend/cameo/frozen_east_text_detection.pb")
         net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
         self.camera = Cameo(threadId, url, mirror=False, net=net)
         print('keldi')
         # self.start()
