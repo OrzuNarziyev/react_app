@@ -12,6 +12,7 @@ const getToken = () => {
     return null;
 }
 
+
 const getUserName = () => {
     const token = getToken()
 
@@ -22,10 +23,12 @@ const getUserName = () => {
     }
 }
 
+
 const setData = (data) => {
     localStorage.setItem('token', data.access);
     localStorage.setItem('refreshToken', data.refresh);
 };
+
 
 const setRefreshToken = (token) => {
     localStorage.setItem('token', token);
@@ -33,6 +36,7 @@ const setRefreshToken = (token) => {
 
 
 const login = async (userData) => {
+
     return await axiosInstance.post("token/", userData)
 }
 
@@ -79,15 +83,17 @@ const isLoggedIn = () => {
         if (!isLogin) {
             refreshToken()
                 .then(res => {
+                    console.log(res)
                     setRefreshToken(res.data.access)
                     return true
                 })
                 .catch(err => {
+                    console.log(err)
                     return false
                 })
+                return false
 
         }
-
         return true
     }
 }

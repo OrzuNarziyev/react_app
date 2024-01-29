@@ -4,8 +4,9 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
-User.objects.all()
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)

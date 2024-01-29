@@ -43,13 +43,13 @@ def main():
     try:
         src = sys.argv[1]
     except:
-        src = 0
+        src = '/home/scale/Videos/10.73.100.92_01_20240118155802912.mp4'
 
     # cap = video.create_capture(src)
     cap = cv.VideoCapture(src)
     # width, heigth = cap.get(3), cap.get
 
-    classifier_fn = 'digits_svm.dat'
+    classifier_fn = 'backend/cameo/digit_detect/digits_svm.dat'
     if not os.path.exists(classifier_fn):
         print('"%s" not found, run digits.py first' % classifier_fn)
         return
@@ -59,21 +59,22 @@ def main():
     cv.namedWindow('frame') 
   
     # Creating trackbars for color change 
-    cv.createTrackbar('tresh', 'frame', 0, 255, nothing) 
+    # cv.createTrackbar('tresh', 'frame', 0, 255, nothing) 
     
     # Setting minimum position of 'color_track'  
     # trackbar to 100 
-    cv.setTrackbarMin('tresh', 'frame', 21) 
+    # cv.setTrackbarMin('tresh', 'frame', 21) 
 
     # cv.createTrackbar('angle', 'frame', 0, 180, update)
 
     while True:
-        time.sleep(.04)
+        # time.sleep(.04)
+        start = time.time()
         _ret, frame = cap.read()
-        frame = cut_frame(int(50), int(450), int(704), frame)
+        # frame = cut_frame(int(50), int(450), int(704), frame)
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # bin = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 29, 10)
-        bin = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 21, 10)
+        bin = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 31, 10)
         # bin = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 21, 10)
         # bin = cv.adaptiveThreshold(gray,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
         #     cv.THRESH_BINARY,11,2)
@@ -142,7 +143,8 @@ def main():
             digit = model.predict(sample)[1].ravel()
             cv.putText(frame, '%d'%digit, (x, y), cv.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)
             # cv.putText(frame, 'h:%d ,w:%d'%(h,w) , (x, y+20), cv.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)
-
+        end = time.time()
+        print(end-start)
 
         cv.imshow('frame', frame)
         cv.imshow('bin', bin)

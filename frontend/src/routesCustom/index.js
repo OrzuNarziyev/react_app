@@ -21,6 +21,7 @@ import { authService } from "services/authService";
 function getUser() {
 
     const is_logged = authService.isLoggedIn()
+    
     return is_logged
 
 
@@ -36,7 +37,10 @@ function getUser() {
     //         })
     //     return false
     // }
+
+
 }
+
 
 const loader = async () => {
     const user = await getUser();
@@ -45,6 +49,16 @@ const loader = async () => {
     }
     return null;
 };
+
+
+const loaderAuth = async () => {
+    const user = await getUser();
+    if (user) {
+        return redirect("/");
+    }
+    return null;
+};
+
 
 const router = createBrowserRouter([
     {
@@ -69,6 +83,7 @@ const router = createBrowserRouter([
     {
         path: "/login",
         element: <LayoutBlank />,
+        loader: loaderAuth,
         errorElement: <Error404 />,
         children: [
             {
